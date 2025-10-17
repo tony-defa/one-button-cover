@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Auto Cover",
+        "description": "Configure your Auto Cover integration",
+        "data": {
+          "button_entity": "Button Entity",
+          "closed_sensor": "Closed Sensor (optional)",
+          "open_sensor": "Open Sensor (optional)",
+          "time_to_open": "Time to Open (seconds)",
+          "time_to_close": "Time to Close (seconds)",
+          "threshold": "Threshold Percentage"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the entity",
+      "invalid_entity": "Invalid entity ID",
+      "invalid_time": "Time must be a positive number",
+      "invalid_threshold": "Threshold must be between 0 and 100",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This device is already configured"
+    }
+  }
+}
