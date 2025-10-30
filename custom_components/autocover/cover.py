@@ -121,6 +121,9 @@ class AutoCover(CoverEntity, RestoreEntity):
         self._obstacle_check_handle = None
         self._obstacle_detected_count = 0
         
+        # Scheduled stop handle
+        self._scheduled_stop_handle = None
+        
         # Manual operation tracking
         self._manual_operation_count = 0
         
@@ -256,6 +259,11 @@ class AutoCover(CoverEntity, RestoreEntity):
         if self._obstacle_check_handle:
             self._obstacle_check_handle.cancel()
             self._obstacle_check_handle = None
+        
+        # Cancel scheduled stop
+        if self._scheduled_stop_handle:
+            self._scheduled_stop_handle.cancel()
+            self._scheduled_stop_handle = None
         
         # Remove sensor listeners
         for remove_listener in self._sensor_listeners:
@@ -434,6 +442,11 @@ class AutoCover(CoverEntity, RestoreEntity):
         if self._obstacle_check_handle:
             self._obstacle_check_handle.cancel()
             self._obstacle_check_handle = None
+        
+        # Cancel scheduled stop
+        if self._scheduled_stop_handle:
+            self._scheduled_stop_handle.cancel()
+            self._scheduled_stop_handle = None
         
         # Reset movement variables
         self._movement_start_time = None
@@ -667,6 +680,11 @@ class AutoCover(CoverEntity, RestoreEntity):
 
     def _schedule_stop_at_position(self) -> None:
         """Schedule stop button press when target position should be reached."""
+        # Cancel any previous scheduled stop
+        if self._scheduled_stop_handle:
+            self._scheduled_stop_handle.cancel()
+            self._scheduled_stop_handle = None
+        
         if self._movement_duration <= 0:
             return
         
@@ -679,7 +697,7 @@ class AutoCover(CoverEntity, RestoreEntity):
                 )
                 await self._stop_movement()
         
-        self.hass.loop.call_later(
+        self._scheduled_stop_handle = self.hass.loop.call_later(
             self._movement_duration,
             lambda: self.hass.create_task(stop_at_position()),
         )
