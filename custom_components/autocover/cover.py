@@ -98,7 +98,7 @@ class AutoCover(CoverEntity, RestoreEntity):
         # State variables
         self._state = CoverState.CLOSED
         self._position = 0  # 0-100%
-        self._last_direction = None  # "UP" or "DOWN"
+        self._next_direction = "UP"  # Direction of next button press: "UP" or "DOWN"
         self._target_position = None
         
         # Movement tracking
@@ -181,7 +181,7 @@ class AutoCover(CoverEntity, RestoreEntity):
         
         return {
             "current_position": self._position,
-            "last_direction": self._last_direction,
+            "next_direction": self._next_direction,
             "operation_mode": operation_mode,
             "button_entity": self._button_entity,
             "button_last_press": self._button_press_time.isoformat() if self._button_press_time else None,
@@ -204,7 +204,11 @@ class AutoCover(CoverEntity, RestoreEntity):
         last_state = await self.async_get_last_state()
         if last_state:
             self._position = last_state.attributes.get("current_position", 0)
-            self._last_direction = last_state.attributes.get("last_direction")
+            # Restore next_direction, defaulting based on position
+            self._next_direction = last_state.attributes.get("next_direction")
+            if self._next_direction is None:
+                # If no saved direction, infer from position
+                self._next_direction = "UP" if self._position < 50 else "DOWN"
             self._obstacle_detected_count = last_state.attributes.get("obstacle_detected_count", 0)
             self._manual_operation_count = last_state.attributes.get("manual_operation_count", 0)
             
@@ -373,7 +377,6 @@ class AutoCover(CoverEntity, RestoreEntity):
         self._target_position = target_position
         self._movement_start_position = self._position
         self._movement_start_time = datetime.now()
-        self._last_direction = "UP"
         
         # Calculate movement duration
         position_delta = self._target_position - self._movement_start_position
@@ -383,8 +386,22 @@ class AutoCover(CoverEntity, RestoreEntity):
         self._state = CoverState.OPENING
         self.async_write_ha_state()
         
-        # Press button to start opening
-        await self._press_button()
+        # Check if button is in wrong direction
+        if self._next_direction == "DOWN":
+            # Button would close, need to press twice to correct direction
+            _LOGGER.debug(
+                "Cover %s: correcting direction from DOWN to UP (double press)",
+                self._attr_name
+            )
+            await self._press_button()  # First press to toggle direction
+            await asyncio.sleep(BUTTON_ACTIVATION_TIME + 0.1)
+            await self._press_button()  # Second press to start opening
+        else:
+            # Button is already set to open, press once
+            await self._press_button()
+        
+        # After starting to open, next button press will close (or stop then close)
+        self._next_direction = "DOWN"
         
         # Start position tracking
         self._start_position_tracking()
@@ -401,7 +418,6 @@ class AutoCover(CoverEntity, RestoreEntity):
         self._target_position = target_position
         self._movement_start_position = self._position
         self._movement_start_time = datetime.now()
-        self._last_direction = "DOWN"
         
         # Calculate movement duration
         position_delta = self._movement_start_position - self._target_position
@@ -411,8 +427,22 @@ class AutoCover(CoverEntity, RestoreEntity):
         self._state = CoverState.CLOSING
         self.async_write_ha_state()
         
-        # Press button to start closing
-        await self._press_button()
+        # Check if button is in wrong direction
+        if self._next_direction == "UP":
+            # Button would open, need to press twice to correct direction
+            _LOGGER.debug(
+                "Cover %s: correcting direction from UP to DOWN (double press)",
+                self._attr_name
+            )
+            await self._press_button()  # First press to toggle direction
+            await asyncio.sleep(BUTTON_ACTIVATION_TIME + 0.1)
+            await self._press_button()  # Second press to start closing
+        else:
+            # Button is already set to close, press once
+            await self._press_button()
+        
+        # After starting to close, next button press will open (or stop then open)
+        self._next_direction = "UP"
         
         # Start position tracking
         self._start_position_tracking()
@@ -433,6 +463,8 @@ class AutoCover(CoverEntity, RestoreEntity):
         self._update_position()
         
         # Transition to HALTED state
+        # Note: next_direction was already set correctly when movement started
+        # (OPENING sets next to DOWN, CLOSING sets next to UP)
         self._state = CoverState.HALTED
         
         # Stop position tracking
@@ -735,9 +767,13 @@ class AutoCover(CoverEntity, RestoreEntity):
             if self._target_position == 100:
                 self._position = 100
                 self._state = CoverState.OPEN
+                # When fully open, next button press will close
+                self._next_direction = "DOWN"
             elif self._target_position == 0:
                 self._position = 0
                 self._state = CoverState.CLOSED
+                # When fully closed, next button press will open
+                self._next_direction = "UP"
             
             self._stop_position_tracking()
             self.async_write_ha_state()
@@ -787,6 +823,8 @@ class AutoCover(CoverEntity, RestoreEntity):
                     _LOGGER.info("Manual operation detected on %s: closed", self._attr_name)
                     self._position = 0
                     self._state = CoverState.CLOSED
+                    # When fully closed, next button press will open
+                    self._next_direction = "UP"
                     self._manual_operation_count += 1
                     self.async_write_ha_state()
             
@@ -795,6 +833,8 @@ class AutoCover(CoverEntity, RestoreEntity):
                     _LOGGER.info("Manual operation detected on %s: opened", self._attr_name)
                     self._position = 100
                     self._state = CoverState.OPEN
+                    # When fully open, next button press will close
+                    self._next_direction = "DOWN"
                     self._manual_operation_count += 1
                     self.async_write_ha_state()
 
@@ -805,6 +845,8 @@ class AutoCover(CoverEntity, RestoreEntity):
             if sensor_state and sensor_state.state == "on":
                 self._position = 0
                 self._state = CoverState.CLOSED
+                # When fully closed, next button press will open
+                self._next_direction = "UP"
                 _LOGGER.debug("Initialized %s as closed from sensor", self._attr_name)
                 return
         
@@ -813,6 +855,8 @@ class AutoCover(CoverEntity, RestoreEntity):
             if sensor_state and sensor_state.state == "on":
                 self._position = 100
                 self._state = CoverState.OPEN
+                # When fully open, next button press will close
+                self._next_direction = "DOWN"
                 _LOGGER.debug("Initialized %s as open from sensor", self._attr_name)
                 return
         
