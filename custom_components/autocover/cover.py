@@ -252,7 +252,7 @@ class AutoCover(CoverEntity, RestoreEntity):
         """Clean up when entity is removed."""
         # Cancel position update timer
         if self._position_update_handle:
-            self._position_update_handle.cancel()
+            self._position_update_handle()
             self._position_update_handle = None
 
         # Cancel obstacle check
@@ -530,7 +530,7 @@ class AutoCover(CoverEntity, RestoreEntity):
     def _start_position_tracking(self) -> None:
         """Start tracking position updates."""
         if self._position_update_handle:
-            self._position_update_handle.cancel()
+            self._position_update_handle()
         
         # Initialize stuck detection
         self._stuck_check_position = self._position
@@ -548,7 +548,7 @@ class AutoCover(CoverEntity, RestoreEntity):
     def _stop_position_tracking(self) -> None:
         """Stop tracking position updates."""
         if self._position_update_handle:
-            self._position_update_handle.cancel()
+            self._position_update_handle()
             self._position_update_handle = None
         
         _LOGGER.debug("Stopped position tracking for %s", self._attr_name)
