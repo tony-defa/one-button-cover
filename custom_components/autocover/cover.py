@@ -374,6 +374,11 @@ class AutoCover(CoverEntity, RestoreEntity):
 
     async def _start_opening(self, target_position: int = 100) -> None:
         """Start opening the cover."""
+        # Cancel any previously scheduled stop
+        if self._scheduled_stop_handle:
+            self._scheduled_stop_handle.cancel()
+            self._scheduled_stop_handle = None
+        
         self._target_position = target_position
         self._movement_start_position = self._position
         self._movement_start_time = datetime.now()
@@ -415,6 +420,11 @@ class AutoCover(CoverEntity, RestoreEntity):
 
     async def _start_closing(self, target_position: int = 0) -> None:
         """Start closing the cover."""
+        # Cancel any previously scheduled stop
+        if self._scheduled_stop_handle:
+            self._scheduled_stop_handle.cancel()
+            self._scheduled_stop_handle = None
+        
         self._target_position = target_position
         self._movement_start_position = self._position
         self._movement_start_time = datetime.now()
@@ -712,11 +722,6 @@ class AutoCover(CoverEntity, RestoreEntity):
 
     def _schedule_stop_at_position(self) -> None:
         """Schedule stop button press when target position should be reached."""
-        # Cancel any previous scheduled stop
-        if self._scheduled_stop_handle:
-            self._scheduled_stop_handle.cancel()
-            self._scheduled_stop_handle = None
-        
         if self._movement_duration <= 0:
             return
         
