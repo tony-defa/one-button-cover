@@ -804,19 +804,31 @@ class AutoCover(CoverEntity, RestoreEntity):
         """Handle obstacle detection."""
         self._obstacle_detected_count += 1
         
+        # Determine where the physical cover will end up after auto-reverse
+        # If closing (going down), it reverses to fully open
+        # If opening (going up), it reverses to fully closed
+        if self._state == CoverState.CLOSING:
+            final_position = 100
+            final_state = CoverState.OPEN
+            # After reaching fully open, next press will close
+            self._next_direction = "DOWN"
+        else:  # OPENING
+            final_position = 0
+            final_state = CoverState.CLOSED
+            # After reaching fully closed, next press will open
+            self._next_direction = "UP"
+        
         _LOGGER.warning(
-            "Obstacle detected on cover %s at position %d%% (count: %d) - physical cover will reverse automatically",
+            "Obstacle detected on cover %s at position %d%% (count: %d) - physical cover reversing to %s",
             self._attr_name,
             self._position,
             self._obstacle_detected_count,
+            "fully open" if final_position == 100 else "fully closed",
         )
         
-        # Update position one last time
-        self._update_position()
-        
-        # Transition to HALTED state without pressing button
-        # The physical cover will reverse automatically due to its safety mechanism
-        self._state = CoverState.HALTED
+        # Update to final position and state
+        self._position = final_position
+        self._state = final_state
         
         # Stop position tracking
         self._stop_position_tracking()
@@ -836,10 +848,6 @@ class AutoCover(CoverEntity, RestoreEntity):
         self._movement_start_position = None
         self._movement_duration = None
         self._target_position = None
-        
-        # The physical cover reversed, so toggle the next_direction
-        # If we were closing and hit obstacle, cover is now opening, so next press will close
-        self._next_direction = "UP" if self._next_direction == "DOWN" else "DOWN"
         
         self.async_write_ha_state()
         
