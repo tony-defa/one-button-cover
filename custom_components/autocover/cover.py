@@ -747,22 +747,34 @@ class AutoCover(CoverEntity, RestoreEntity):
         
         if self._target_position == 100 and self._open_sensor:
             # Should be fully open
+            # For door/opening sensors: "on" typically means open
             sensor_state = self.hass.states.get(self._open_sensor)
-            if sensor_state and sensor_state.state != "on":
+            if sensor_state and sensor_state.state == "on":
+                # Sensor confirms open - success, no obstacle
+                pass
+            elif sensor_state and sensor_state.state in ["off", "unavailable", "unknown"]:
+                # Sensor doesn't confirm open - obstacle detected
                 obstacle_detected = True
                 _LOGGER.warning(
-                    "Obstacle detected on %s: open sensor not active",
+                    "Obstacle detected on %s: open sensor shows %s (expected on)",
                     self._attr_name,
+                    sensor_state.state,
                 )
         
         elif self._target_position == 0 and self._closed_sensor:
             # Should be fully closed
+            # For door/opening sensors: "off" typically means closed
             sensor_state = self.hass.states.get(self._closed_sensor)
-            if sensor_state and sensor_state.state != "on":
+            if sensor_state and sensor_state.state == "off":
+                # Sensor confirms closed - success, no obstacle
+                pass
+            elif sensor_state and sensor_state.state in ["on", "unavailable", "unknown"]:
+                # Sensor doesn't confirm closed - obstacle detected
                 obstacle_detected = True
                 _LOGGER.warning(
-                    "Obstacle detected on %s: closed sensor not active",
+                    "Obstacle detected on %s: closed sensor shows %s (expected off)",
                     self._attr_name,
+                    sensor_state.state,
                 )
         
         if obstacle_detected:
@@ -792,17 +804,46 @@ class AutoCover(CoverEntity, RestoreEntity):
         """Handle obstacle detection."""
         self._obstacle_detected_count += 1
         
-        _LOGGER.error(
-            "Obstacle detected on cover %s at position %d%% (count: %d)",
+        _LOGGER.warning(
+            "Obstacle detected on cover %s at position %d%% (count: %d) - physical cover will reverse automatically",
             self._attr_name,
             self._position,
             self._obstacle_detected_count,
         )
         
-        # Stop movement
-        await self._stop_movement()
+        # Update position one last time
+        self._update_position()
         
-        # Don't auto-reverse for safety - wait for user command
+        # Transition to HALTED state without pressing button
+        # The physical cover will reverse automatically due to its safety mechanism
+        self._state = CoverState.HALTED
+        
+        # Stop position tracking
+        self._stop_position_tracking()
+        
+        # Cancel obstacle check
+        if self._obstacle_check_handle:
+            self._obstacle_check_handle.cancel()
+            self._obstacle_check_handle = None
+        
+        # Cancel scheduled stop
+        if self._scheduled_stop_handle:
+            self._scheduled_stop_handle.cancel()
+            self._scheduled_stop_handle = None
+        
+        # Reset movement variables
+        self._movement_start_time = None
+        self._movement_start_position = None
+        self._movement_duration = None
+        self._target_position = None
+        
+        # The physical cover reversed, so toggle the next_direction
+        # If we were closing and hit obstacle, cover is now opening, so next press will close
+        self._next_direction = "UP" if self._next_direction == "DOWN" else "DOWN"
+        
+        self.async_write_ha_state()
+        
+        # Don't press button - let the physical cover handle the reversal
 
     @callback
     def _handle_sensor_change(self, event) -> None:
@@ -823,7 +864,8 @@ class AutoCover(CoverEntity, RestoreEntity):
         
         # Check for manual operation (sensor change while idle)
         if self._state not in [CoverState.OPENING, CoverState.CLOSING]:
-            if entity_id == self._closed_sensor and new_state.state == "on":
+            # For door/opening sensors: "off" = closed, "on" = open
+            if entity_id == self._closed_sensor and new_state.state == "off":
                 if self._position != 0:
                     _LOGGER.info("Manual operation detected on %s: closed", self._attr_name)
                     self._position = 0
@@ -845,9 +887,10 @@ class AutoCover(CoverEntity, RestoreEntity):
 
     async def _sync_position_from_sensors(self) -> None:
         """Synchronize position from sensor states."""
+        # For door/opening sensors: "off" = closed, "on" = open
         if self._closed_sensor:
             sensor_state = self.hass.states.get(self._closed_sensor)
-            if sensor_state and sensor_state.state == "on":
+            if sensor_state and sensor_state.state == "off":
                 self._position = 0
                 self._state = CoverState.CLOSED
                 # When fully closed, next button press will open
