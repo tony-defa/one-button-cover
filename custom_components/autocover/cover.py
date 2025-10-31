@@ -870,27 +870,64 @@ class AutoCover(CoverEntity, RestoreEntity):
             new_state.state,
         )
         
-        # Check for manual operation (sensor change while idle)
-        if self._state not in [CoverState.OPENING, CoverState.CLOSING]:
-            # For door/opening sensors: "off" = closed, "on" = open
-            if entity_id == self._closed_sensor and new_state.state == "off":
-                if self._position != 0:
-                    _LOGGER.info("Manual operation detected on %s: closed", self._attr_name)
+        # For door/opening sensors: "off" = closed, "on" = open
+        
+        # Handle closed sensor changes
+        if entity_id == self._closed_sensor:
+            if new_state.state == "off":
+                # Sensor confirms cover is closed
+                if self._position != 0 or self._state != CoverState.CLOSED:
+                    old_state = self._state
+                    
+                    _LOGGER.info("Sensor detected cover %s is closed (was at %d%%)",
+                                self._attr_name, self._position)
+                    
                     self._position = 0
                     self._state = CoverState.CLOSED
-                    # When fully closed, next button press will open
                     self._next_direction = "UP"
-                    self._manual_operation_count += 1
+                    
+                    # If cover was moving, stop tracking
+                    if old_state in [CoverState.OPENING, CoverState.CLOSING]:
+                        self._stop_position_tracking()
+                        # Cancel any scheduled operations
+                        if self._obstacle_check_handle:
+                            self._obstacle_check_handle.cancel()
+                            self._obstacle_check_handle = None
+                        if self._scheduled_stop_handle:
+                            self._scheduled_stop_handle.cancel()
+                            self._scheduled_stop_handle = None
+                    else:
+                        self._manual_operation_count += 1
+                    
                     self.async_write_ha_state()
-            
-            elif entity_id == self._open_sensor and new_state.state == "on":
-                if self._position != 100:
-                    _LOGGER.info("Manual operation detected on %s: opened", self._attr_name)
+        
+        # Handle open sensor changes
+        elif entity_id == self._open_sensor:
+            if new_state.state == "on":
+                # Sensor confirms cover is open
+                if self._position != 100 or self._state != CoverState.OPEN:
+                    old_state = self._state
+                    
+                    _LOGGER.info("Sensor detected cover %s is open (was at %d%%)",
+                                self._attr_name, self._position)
+                    
                     self._position = 100
                     self._state = CoverState.OPEN
-                    # When fully open, next button press will close
                     self._next_direction = "DOWN"
-                    self._manual_operation_count += 1
+                    
+                    # If cover was moving, stop tracking
+                    if old_state in [CoverState.OPENING, CoverState.CLOSING]:
+                        self._stop_position_tracking()
+                        # Cancel any scheduled operations
+                        if self._obstacle_check_handle:
+                            self._obstacle_check_handle.cancel()
+                            self._obstacle_check_handle = None
+                        if self._scheduled_stop_handle:
+                            self._scheduled_stop_handle.cancel()
+                            self._scheduled_stop_handle = None
+                    else:
+                        self._manual_operation_count += 1
+                    
                     self.async_write_ha_state()
 
     async def _sync_position_from_sensors(self) -> None:
