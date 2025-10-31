@@ -236,6 +236,9 @@ class AutoCover(CoverEntity, RestoreEntity):
                 self._next_direction = "UP" if self._position < 50 else "DOWN"
             self._obstacle_detected_count = last_state.attributes.get("obstacle_detected_count", 0)
             self._manual_operation_count = last_state.attributes.get("manual_operation_count", 0)
+            # Restore safety state
+            self._disabled = last_state.attributes.get("disabled", False)
+            self._failure_count = last_state.attributes.get("failure_count", 0)
             
             # Don't restore OPENING/CLOSING states - default to HALTED
             if last_state.state in [STATE_OPENING, STATE_CLOSING]:
@@ -570,7 +573,9 @@ class AutoCover(CoverEntity, RestoreEntity):
             
         except Exception as err:
             _LOGGER.error("Failed to press button %s: %s", self._button_entity, err)
-            self._failure_count += 1
+            # Cap failure count at MAX_RETRIES
+            if self._failure_count < MAX_RETRIES:
+                self._failure_count += 1
             
             if self._failure_count >= MAX_RETRIES:
                 _LOGGER.error(
@@ -695,6 +700,16 @@ class AutoCover(CoverEntity, RestoreEntity):
 
     def _schedule_obstacle_check(self) -> None:
         """Schedule obstacle detection check after threshold time."""
+        # Skip obstacle check if no sensors configured
+        if not self._closed_sensor and not self._open_sensor:
+            _LOGGER.debug("No sensors configured, skipping obstacle check for %s", self._attr_name)
+            return
+        
+        # Skip if movement duration not set
+        if self._movement_duration is None:
+            _LOGGER.debug("No movement duration set, skipping obstacle check for %s", self._attr_name)
+            return
+        
         if self._obstacle_check_handle:
             self._obstacle_check_handle.cancel()
             self._obstacle_check_handle = None
