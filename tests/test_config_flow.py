@@ -45,12 +45,19 @@ class TestAutoCoverConfigFlow:
 
         schema = _get_schema(user_input)
 
-        # Check that the schema contains the user input as defaults
-        assert schema.schema[CONF_BUTTON_ENTITY].default == "button.test"
-        assert schema.schema[CONF_TIME_TO_OPEN].default == 45.0
-        assert schema.schema[CONF_TIME_TO_CLOSE].default == 35.0
+        # Check that the schema has the expected fields and accepts defaults
+        # With selectors, defaults are on the vol.Required marker, not the selector itself
+        schema_keys = {key.schema: key for key in schema.schema.keys()}
+        assert CONF_BUTTON_ENTITY in schema_keys
+        assert CONF_TIME_TO_OPEN in schema_keys
+        assert CONF_TIME_TO_CLOSE in schema_keys
+        
+        # Verify defaults are applied
+        assert schema_keys[CONF_BUTTON_ENTITY].default == "button.test"
+        assert schema_keys[CONF_TIME_TO_OPEN].default == 45.0
+        assert schema_keys[CONF_TIME_TO_CLOSE].default == 35.0
 
-    def test_validate_input_with_valid_data_returns_no_errors(self, hass, mock_states, mock_entity_registry):
+    async def test_validate_input_with_valid_data_returns_no_errors(self, hass, mock_states, mock_entity_registry):
         """Test that _validate_input returns no errors for valid input."""
         hass.helpers.entity_registry.async_get = mock_entity_registry
         config_data = {
@@ -62,23 +69,23 @@ class TestAutoCoverConfigFlow:
             CONF_THRESHOLD: DEFAULT_THRESHOLD,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert errors == {}
 
-    def test_validate_input_with_missing_button_entity_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_missing_button_entity_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for missing button entity."""
         config_data = {
             CONF_TIME_TO_OPEN: 30.0,
             CONF_TIME_TO_CLOSE: 25.0,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_BUTTON_ENTITY in errors
         assert errors[CONF_BUTTON_ENTITY] == "invalid_entity"
 
-    def test_validate_input_with_invalid_button_entity_format_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_invalid_button_entity_format_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for invalid button entity format."""
         config_data = {
             CONF_BUTTON_ENTITY: "invalid_button_format",
@@ -86,12 +93,12 @@ class TestAutoCoverConfigFlow:
             CONF_TIME_TO_CLOSE: 25.0,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_BUTTON_ENTITY in errors
         assert errors[CONF_BUTTON_ENTITY] == "invalid_entity"
 
-    def test_validate_input_with_nonexistent_button_entity_returns_error(self, hass, mock_entity_registry):
+    async def test_validate_input_with_nonexistent_button_entity_returns_error(self, hass, mock_entity_registry):
         """Test that _validate_input returns error for non-existent button entity."""
         hass.helpers.entity_registry.async_get = mock_entity_registry
         mock_entity_registry.async_get.return_value = None
@@ -103,12 +110,12 @@ class TestAutoCoverConfigFlow:
             CONF_TIME_TO_CLOSE: 25.0,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_BUTTON_ENTITY in errors
         assert errors[CONF_BUTTON_ENTITY] == "invalid_entity"
 
-    def test_validate_input_with_invalid_sensor_format_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_invalid_sensor_format_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for invalid sensor format."""
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -117,12 +124,12 @@ class TestAutoCoverConfigFlow:
             CONF_TIME_TO_CLOSE: 25.0,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_OPEN_SENSOR in errors
         assert errors[CONF_OPEN_SENSOR] == "invalid_entity"
 
-    def test_validate_input_with_nonexistent_sensor_returns_error(self, hass, mock_entity_registry):
+    async def test_validate_input_with_nonexistent_sensor_returns_error(self, hass, mock_entity_registry):
         """Test that _validate_input returns error for non-existent sensor."""
         hass.helpers.entity_registry.async_get = mock_entity_registry
         mock_entity_registry.async_get.return_value = None
@@ -135,12 +142,12 @@ class TestAutoCoverConfigFlow:
             CONF_TIME_TO_CLOSE: 25.0,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_OPEN_SENSOR in errors
         assert errors[CONF_OPEN_SENSOR] == "invalid_entity"
 
-    def test_validate_input_with_invalid_time_to_open_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_invalid_time_to_open_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for invalid time to open."""
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -148,12 +155,12 @@ class TestAutoCoverConfigFlow:
             CONF_TIME_TO_CLOSE: 25.0,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_TIME_TO_OPEN in errors
         assert errors[CONF_TIME_TO_OPEN] == "invalid_time"
 
-    def test_validate_input_with_zero_time_to_open_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_zero_time_to_open_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for zero time to open."""
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -161,12 +168,12 @@ class TestAutoCoverConfigFlow:
             CONF_TIME_TO_CLOSE: 25.0,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_TIME_TO_OPEN in errors
         assert errors[CONF_TIME_TO_OPEN] == "invalid_time"
 
-    def test_validate_input_with_invalid_time_to_close_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_invalid_time_to_close_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for invalid time to close."""
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -174,12 +181,12 @@ class TestAutoCoverConfigFlow:
             CONF_TIME_TO_CLOSE: -10.0,  # Invalid negative time
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_TIME_TO_CLOSE in errors
         assert errors[CONF_TIME_TO_CLOSE] == "invalid_time"
 
-    def test_validate_input_with_invalid_threshold_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_invalid_threshold_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for invalid threshold."""
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -188,12 +195,12 @@ class TestAutoCoverConfigFlow:
             CONF_THRESHOLD: 150,  # Invalid > 100
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_THRESHOLD in errors
         assert errors[CONF_THRESHOLD] == "invalid_threshold"
 
-    def test_validate_input_with_negative_threshold_returns_error(self, hass, mock_states):
+    async def test_validate_input_with_negative_threshold_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for negative threshold."""
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -202,12 +209,12 @@ class TestAutoCoverConfigFlow:
             CONF_THRESHOLD: -10,  # Invalid negative
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert CONF_THRESHOLD in errors
         assert errors[CONF_THRESHOLD] == "invalid_threshold"
 
-    def test_validate_input_allows_optional_sensors_to_be_missing(self, hass, mock_states):
+    async def test_validate_input_allows_optional_sensors_to_be_missing(self, hass, mock_states):
         """Test that _validate_input allows missing optional sensors."""
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -216,13 +223,13 @@ class TestAutoCoverConfigFlow:
             # No sensors provided
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         # Should have no errors for missing optional sensors
         assert CONF_OPEN_SENSOR not in errors
         assert CONF_CLOSED_SENSOR not in errors
 
-    def test_validate_input_with_minimal_valid_data_returns_no_errors(self, hass, mock_states, mock_entity_registry):
+    async def test_validate_input_with_minimal_valid_data_returns_no_errors(self, hass, mock_states, mock_entity_registry):
         """Test that _validate_input works with minimal valid data."""
         hass.helpers.entity_registry.async_get = mock_entity_registry
         config_data = {
@@ -232,7 +239,7 @@ class TestAutoCoverConfigFlow:
             CONF_THRESHOLD: DEFAULT_THRESHOLD,
         }
 
-        errors = _validate_input(hass, config_data)
+        errors = await _validate_input(hass, config_data)
 
         assert errors == {}
 

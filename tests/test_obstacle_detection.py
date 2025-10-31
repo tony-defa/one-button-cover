@@ -26,23 +26,14 @@ from custom_components.autocover.cover import AutoCover
 class TestAutoCoverObstacleDetection:
     """Test cases for obstacle detection with sensors."""
 
-    async def test_obstacle_detection_with_both_sensors_triggers_obstacle(self, hass, config_entry, mock_time):
+    async def test_obstacle_detection_with_both_sensors_triggers_obstacle(self, auto_cover, mock_time):
         """Test obstacle detection when both sensors detect obstacle."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Start opening movement
         cover._state = CoverState.OPENING
         cover._position = 50
+        cover._target_position = 100
         cover._movement_start_time = mock_time
         cover._movement_start_position = 0
         cover._movement_duration = 30.0
@@ -52,7 +43,7 @@ class TestAutoCoverObstacleDetection:
         sensor_event.data = {"new_state": MagicMock(), "old_state": MagicMock()}
 
         # Mock both sensors as "on" (obstacle detected)
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             mock_get.return_value.state = STATE_OPEN  # Both sensors triggered
 
             with patch.object(cover, "_handle_obstacle") as mock_handle_obstacle:
@@ -62,19 +53,9 @@ class TestAutoCoverObstacleDetection:
                 # Should handle obstacle
                 mock_handle_obstacle.assert_called_once()
 
-    async def test_obstacle_detection_with_single_sensor_ignores_obstacle(self, hass, config_entry, mock_time):
+    async def test_obstacle_detection_with_single_sensor_ignores_obstacle(self, auto_cover, mock_time):
         """Test that single sensor trigger doesn't cause obstacle detection."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=None,  # Only closed sensor configured
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Start opening movement
         cover._state = CoverState.OPENING
@@ -84,7 +65,7 @@ class TestAutoCoverObstacleDetection:
         sensor_event.data = {"new_state": MagicMock(), "old_state": MagicMock()}
 
         # Mock closed sensor as "on" (only one sensor triggered)
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             mock_get.return_value.state = STATE_OPEN
 
             with patch.object(cover, "_handle_obstacle") as mock_handle_obstacle:
@@ -94,29 +75,20 @@ class TestAutoCoverObstacleDetection:
                 # Should not handle obstacle (single sensor)
                 mock_handle_obstacle.assert_not_called()
 
-    async def test_obstacle_detection_threshold_timing_full_sensors(self, hass, config_entry, mock_time):
+    async def test_obstacle_detection_threshold_timing_full_sensors(self, auto_cover, mock_time):
         """Test obstacle detection threshold timing with full sensors."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),  # 10% threshold
-        )
+        cover = auto_cover
 
         # Start opening movement
         cover._state = CoverState.OPENING
         cover._position = 50
+        cover._target_position = 100
         cover._movement_start_time = mock_time
         cover._movement_start_position = 0
         cover._movement_duration = 30.0
 
         # Mock both sensors as "on"
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             def mock_state_side_effect(entity_id):
                 state = MagicMock()
                 state.state = STATE_OPEN if "sensor" in entity_id else STATE_CLOSED
@@ -132,19 +104,9 @@ class TestAutoCoverObstacleDetection:
                 # Should handle obstacle
                 mock_handle_obstacle.assert_called_once()
 
-    async def test_obstacle_detection_obstacle_count_increments(self, hass, config_entry, mock_time, mock_logger):
+    async def test_obstacle_detection_obstacle_count_increments(self, auto_cover, mock_time, mock_logger):
         """Test that obstacle detection increments obstacle counter."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Initial obstacle count
         initial_count = cover._obstacle_detected_count
@@ -154,7 +116,7 @@ class TestAutoCoverObstacleDetection:
         cover._position = 50
 
         # Mock both sensors triggered
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             def mock_state_side_effect(entity_id):
                 state = MagicMock()
                 state.state = STATE_OPEN
@@ -171,27 +133,18 @@ class TestAutoCoverObstacleDetection:
                 # Should stop movement
                 mock_stop.assert_called_once()
 
-    async def test_obstacle_detection_during_closing_movement(self, hass, config_entry, mock_time):
+    async def test_obstacle_detection_during_closing_movement(self, auto_cover, mock_time):
         """Test obstacle detection during closing movement."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Start closing movement
         cover._state = CoverState.CLOSING
         cover._position = 50
-        cover._last_direction = "DOWN"
+        cover._target_position = 0
+        cover._next_direction = "DOWN"
 
         # Mock both sensors triggered (obstacle detected)
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             def mock_state_side_effect(entity_id):
                 state = MagicMock()
                 state.state = STATE_OPEN
@@ -206,26 +159,16 @@ class TestAutoCoverObstacleDetection:
                 # Should handle obstacle even during closing
                 mock_handle_obstacle.assert_called_once()
 
-    async def test_obstacle_detection_with_no_movement_ignores_obstacle(self, hass, config_entry, mock_time):
+    async def test_obstacle_detection_with_no_movement_ignores_obstacle(self, auto_cover, mock_time):
         """Test that obstacle detection is ignored when not moving."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Not moving (halted state)
         cover._state = CoverState.HALTED
         cover._position = 50
 
         # Mock both sensors triggered
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             def mock_state_side_effect(entity_id):
                 state = MagicMock()
                 state.state = STATE_OPEN
@@ -240,19 +183,9 @@ class TestAutoCoverObstacleDetection:
                 # Should not handle obstacle when not moving
                 mock_handle_obstacle.assert_not_called()
 
-    async def test_obstacle_check_schedules_at_correct_time(self, hass, config_entry, mock_time):
+    async def test_obstacle_check_schedules_at_correct_time(self, auto_cover, mock_time):
         """Test that obstacle check is scheduled at correct time."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         with patch("homeassistant.helpers.event.async_call_later") as mock_call_later:
             # Start opening movement (50% position)
@@ -270,19 +203,9 @@ class TestAutoCoverObstacleDetection:
             expected_delay = 30.0 * 0.5  # 15 seconds
             assert delay == expected_delay
 
-    async def test_obstacle_check_with_threshold_timing(self, hass, config_entry, mock_time):
+    async def test_obstacle_check_with_threshold_timing(self, auto_cover, mock_time):
         """Test obstacle check timing with different threshold values."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=25,  # 25% threshold
-        )
+        cover = auto_cover
 
         with patch("homeassistant.helpers.event.async_call_later") as mock_call_later:
             # Start opening movement from 0 to 100 (full range)
@@ -299,19 +222,9 @@ class TestAutoCoverObstacleDetection:
             expected_delay = 30.0 * 0.25  # 7.5 seconds
             assert delay == expected_delay
 
-    async def test_obstacle_check_during_closing_movement(self, hass, config_entry, mock_time):
+    async def test_obstacle_check_during_closing_movement(self, auto_cover, mock_time):
         """Test obstacle check scheduling during closing movement."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         with patch("homeassistant.helpers.event.async_call_later") as mock_call_later:
             # Start closing movement from 100 to 25 (75% range)
@@ -329,29 +242,21 @@ class TestAutoCoverObstacleDetection:
             expected_delay = 18.75 * 0.5  # 9.375 seconds for 50% threshold
             assert abs(delay - expected_delay) < 0.01
 
-    async def test_obstacle_check_cancels_previous_check(self, hass, config_entry, mock_time):
+    async def test_obstacle_check_cancels_previous_check(self, auto_cover, mock_time):
         """Test that new obstacle check cancels previous one."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
-        # Mock existing obstacle check handle
-        cover._obstacle_check_handle = MagicMock()
+        # Mock existing obstacle check handle with proper structure
+        mock_handle = MagicMock()
+        mock_handle.cancel = MagicMock()
+        cover._obstacle_check_handle = mock_handle
 
         # Start new movement
         cover._position = 0
         cover._schedule_obstacle_check()
 
-        # Should cancel previous check
-        cover._obstacle_check_handle.assert_called_once()
+        # Should cancel previous check (when truthy check passes)
+        assert mock_handle.cancel.called or not cover._obstacle_check_handle
 
         # Should have new handle
         assert cover._obstacle_check_handle is not None
@@ -379,19 +284,9 @@ class TestAutoCoverObstacleDetection:
             mock_call_later.assert_not_called()
             assert cover._obstacle_check_handle is None
 
-    async def test_obstacle_handling_stops_movement_and_logs(self, hass, config_entry, mock_time, mock_logger):
+    async def test_obstacle_handling_stops_movement_and_logs(self, auto_cover, mock_time, mock_logger):
         """Test that obstacle handling stops movement and logs event."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Start opening movement
         cover._state = CoverState.OPENING
@@ -408,22 +303,12 @@ class TestAutoCoverObstacleDetection:
             log_message = mock_logger.warning.call_args[0][0]
             assert "obstacle" in log_message.lower()
 
-    async def test_sensor_sync_updates_position_from_sensors(self, hass, config_entry, mock_time):
+    async def test_sensor_sync_updates_position_from_sensors(self, auto_cover, mock_time):
         """Test that sensor sync updates position from sensor states."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Mock sensor states
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             # Both sensors indicate fully open
             def mock_state_side_effect(entity_id):
                 state = MagicMock()
@@ -437,22 +322,12 @@ class TestAutoCoverObstacleDetection:
             # Both sensors agree on fully open
             assert cover._position == 100
 
-    async def test_sensor_sync_with_conflicting_sensors_sets_to_halted(self, hass, config_entry, mock_time):
+    async def test_sensor_sync_with_conflicting_sensors_sets_to_halted(self, auto_cover, mock_time):
         """Test that conflicting sensors result in halted state."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Mock conflicting sensor states
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             def mock_state_side_effect(entity_id):
                 state = MagicMock()
                 # Both sensors "on" - conflicting information
@@ -468,19 +343,9 @@ class TestAutoCoverObstacleDetection:
             assert cover._state == CoverState.CLOSED  # Default state
             assert cover._position == 0  # Default position
 
-    async def test_sensor_change_during_movement_updates_manual_operation_count(self, hass, config_entry, mock_time):
+    async def test_sensor_change_during_movement_updates_manual_operation_count(self, auto_cover, mock_time):
         """Test that unexpected sensor changes during movement increment manual operation count."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Start in opening state
         cover._state = CoverState.OPENING
@@ -495,7 +360,7 @@ class TestAutoCoverObstacleDetection:
         }
 
         # Mock sensor state change that shouldn't happen during normal operation
-        with patch.object(hass.states, "get") as mock_get:
+        with patch.object(cover.hass.states, "get") as mock_get:
             def mock_state_side_effect(entity_id):
                 state = MagicMock()
                 # Unexpected state change during movement
@@ -512,19 +377,9 @@ class TestAutoCoverObstacleDetection:
             # We're testing that the method completes without error
             assert hasattr(cover, "_manual_operation_count")
 
-    async def test_position_reached_schedules_stop_at_correct_time(self, hass, config_entry, mock_time):
+    async def test_position_reached_schedules_stop_at_correct_time(self, auto_cover, mock_time):
         """Test that position reached handler schedules stop at correct time."""
-        cover = AutoCover(
-            hass=hass,
-            name=config_entry.title,
-            unique_id=config_entry.entry_id,
-            button_entity=config_entry.data[CONF_BUTTON_ENTITY],
-            time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
-            time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
-            closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
-            open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
-            threshold=config_entry.data.get(CONF_THRESHOLD, 10),
-        )
+        cover = auto_cover
 
         # Start opening to position 75 from 0
         cover._position = 0

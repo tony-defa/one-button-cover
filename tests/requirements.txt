@@ -1,5 +1,5 @@
 # Test requirements for Auto Cover integration
 pytest>=7.0.0
 pytest-homeassistant-custom-component>=0.13.0
+pytest-asyncio>=0.21.0
 freezegun>=1.2.0
-syrupy>=4.0.0

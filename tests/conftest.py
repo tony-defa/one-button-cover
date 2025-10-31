@@ -1,11 +1,32 @@
 """Pytest fixtures and test setup for Auto Cover integration tests."""
 from __future__ import annotations
 
+import os
+import sys
+from pathlib import Path
+
+# Disable pytest-socket blocking (required for asyncio on Windows)
+os.environ["PYTEST_DISABLE_SOCKET_CHECK"] = "1"
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pytest_socket import disable_socket, enable_socket
+
+
+def pytest_runtest_setup(item):
+    """Enable sockets for all tests (required for asyncio event loops on Windows)."""
+    try:
+        enable_socket()
+    except:
+        pass  # Ignore if already enabled
 from homeassistant import config_entries
 from homeassistant.const import STATE_CLOSED, STATE_OPEN
 from homeassistant.core import HomeAssistant
@@ -28,11 +49,21 @@ from custom_components.autocover.const import (
 @pytest.fixture
 def hass():
     """Create a mock Home Assistant instance."""
+    import threading
     hass = MagicMock(spec=HomeAssistant)
     hass.states = MagicMock()
+    hass.states.get = MagicMock(return_value=None)
     hass.services = MagicMock()
+    hass.services.async_call = AsyncMock()  # Make async_call awaitable
     hass.config_entries = MagicMock()
     hass.loop = asyncio.get_event_loop()
+    hass.loop_thread_id = threading.get_ident()  # Add thread ID for async_write_ha_state
+    hass.bus = MagicMock()  # Add bus for event listeners
+    hass.bus.async_listen = MagicMock(return_value=lambda: None)  # Return a removal function
+    hass.helpers = MagicMock()  # Add helpers for entity validation
+    hass.helpers.entity_registry = MagicMock()
+    hass.helpers.entity_registry.async_get = AsyncMock()
+    hass.data = {}
     return hass
 
 
@@ -65,6 +96,29 @@ def minimal_config_entry():
         CONF_TIME_TO_CLOSE: 25.0,
     }
     return entry
+
+
+@pytest.fixture
+def auto_cover(hass, config_entry):
+    """Create an AutoCover instance with proper initialization."""
+    from custom_components.autocover.cover import AutoCover
+    
+    cover = AutoCover(
+        hass=hass,
+        name=config_entry.title,
+        unique_id=config_entry.entry_id,
+        button_entity=config_entry.data[CONF_BUTTON_ENTITY],
+        time_to_open=config_entry.data[CONF_TIME_TO_OPEN],
+        time_to_close=config_entry.data[CONF_TIME_TO_CLOSE],
+        closed_sensor=config_entry.data.get(CONF_CLOSED_SENSOR),
+        open_sensor=config_entry.data.get(CONF_OPEN_SENSOR),
+        threshold=config_entry.data.get(CONF_THRESHOLD, 10),
+    )
+    # Set entity_id to avoid NoEntitySpecifiedError
+    cover.entity_id = f"cover.{config_entry.entry_id}"
+    # Mock platform to avoid entity registry warnings
+    cover.platform = MagicMock()
+    return cover
 
 
 @pytest.fixture
@@ -224,6 +278,11 @@ def entity_registry(hass):
 @pytest.fixture
 def event_loop():
     """Create an event loop for async tests."""
+    # Enable socket before creating event loop (required for Windows)
+    try:
+        enable_socket()
+    except:
+        pass
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
