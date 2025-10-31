@@ -114,8 +114,6 @@ class AutoCover(CoverEntity, RestoreEntity):
         # Safety tracking
         self._failure_count = 0
         self._disabled = False
-        self._stuck_check_position = None
-        self._stuck_check_time = None
         
         # Obstacle detection
         self._obstacle_check_handle = None
@@ -574,10 +572,6 @@ class AutoCover(CoverEntity, RestoreEntity):
         if self._position_update_handle:
             self._position_update_handle()
         
-        # Initialize stuck detection
-        self._stuck_check_position = self._position
-        self._stuck_check_time = datetime.now()
-        
         # Schedule periodic position updates
         self._position_update_handle = async_track_time_interval(
             self.hass,
@@ -599,9 +593,6 @@ class AutoCover(CoverEntity, RestoreEntity):
     def _position_update_callback(self, now: datetime) -> None:
         """Update position based on elapsed time."""
         self._update_position()
-        
-        # Check for stuck condition
-        self._check_stuck()
         
         # Check if target position reached
         if self._target_position is not None:
@@ -652,41 +643,6 @@ class AutoCover(CoverEntity, RestoreEntity):
             self._position,
             self._target_position,
         )
-
-    def _check_stuck(self) -> None:
-        """Check if cover is stuck (not moving)."""
-        if self._stuck_check_time is None:
-            return
-        
-        elapsed = (datetime.now() - self._stuck_check_time).total_seconds()
-        position_change = abs(self._position - self._stuck_check_position)
-        
-        if elapsed >= STUCK_TIMEOUT and position_change < 1:  # Less than 1% change
-            _LOGGER.error(
-                "Cover %s appears stuck at position %d%% (no movement for %ds)",
-                self._attr_name,
-                self._position,
-                STUCK_TIMEOUT,
-            )
-            self.hass.create_task(self._handle_stuck())
-        else:
-            # Update stuck check position periodically
-            if elapsed >= 1.0:  # Check every second
-                self._stuck_check_position = self._position
-                self._stuck_check_time = datetime.now()
-
-    async def _handle_stuck(self) -> None:
-        """Handle stuck condition."""
-        await self._stop_movement()
-        self._failure_count += 1
-        
-        if self._failure_count >= MAX_RETRIES:
-            _LOGGER.error(
-                "Cover %s disabled after stuck detection (%d failures)",
-                self._attr_name,
-                MAX_RETRIES,
-            )
-            self._disabled = True
 
     async def _handle_position_reached(self) -> None:
         """Handle reaching target position."""
@@ -745,37 +701,67 @@ class AutoCover(CoverEntity, RestoreEntity):
         
         obstacle_detected = False
         
-        if self._target_position == 100 and self._open_sensor:
-            # Should be fully open
-            # For door/opening sensors: "on" typically means open
-            sensor_state = self.hass.states.get(self._open_sensor)
-            if sensor_state and sensor_state.state == "on":
-                # Sensor confirms open - success, no obstacle
-                pass
-            elif sensor_state and sensor_state.state in ["off", "unavailable", "unknown"]:
-                # Sensor doesn't confirm open - obstacle detected
-                obstacle_detected = True
-                _LOGGER.warning(
-                    "Obstacle detected on %s: open sensor shows %s (expected on)",
-                    self._attr_name,
-                    sensor_state.state,
-                )
+        # Check opening to 100%
+        if self._target_position == 100:
+            if self._open_sensor:
+                # Full sensor mode: check open sensor
+                sensor_state = self.hass.states.get(self._open_sensor)
+                if sensor_state and sensor_state.state == "on":
+                    # Sensor confirms open - success, no obstacle
+                    pass
+                elif sensor_state and sensor_state.state in ["off", "unavailable", "unknown"]:
+                    # Sensor doesn't confirm open - obstacle detected
+                    obstacle_detected = True
+                    _LOGGER.warning(
+                        "Obstacle detected on %s: open sensor shows %s (expected on)",
+                        self._attr_name,
+                        sensor_state.state,
+                    )
+            elif self._closed_sensor:
+                # Single sensor mode (only closed sensor): check it's NOT closed
+                sensor_state = self.hass.states.get(self._closed_sensor)
+                if sensor_state and sensor_state.state == "on":
+                    # Sensor shows NOT closed - success, no obstacle
+                    pass
+                elif sensor_state and sensor_state.state in ["off", "unavailable", "unknown"]:
+                    # Sensor still shows closed - obstacle detected
+                    obstacle_detected = True
+                    _LOGGER.warning(
+                        "Obstacle detected on %s: closed sensor shows %s (expected on when opening)",
+                        self._attr_name,
+                        sensor_state.state,
+                    )
         
-        elif self._target_position == 0 and self._closed_sensor:
-            # Should be fully closed
-            # For door/opening sensors: "off" typically means closed
-            sensor_state = self.hass.states.get(self._closed_sensor)
-            if sensor_state and sensor_state.state == "off":
-                # Sensor confirms closed - success, no obstacle
-                pass
-            elif sensor_state and sensor_state.state in ["on", "unavailable", "unknown"]:
-                # Sensor doesn't confirm closed - obstacle detected
-                obstacle_detected = True
-                _LOGGER.warning(
-                    "Obstacle detected on %s: closed sensor shows %s (expected off)",
-                    self._attr_name,
-                    sensor_state.state,
-                )
+        # Check closing to 0%
+        elif self._target_position == 0:
+            if self._closed_sensor:
+                # Full sensor mode: check closed sensor
+                sensor_state = self.hass.states.get(self._closed_sensor)
+                if sensor_state and sensor_state.state == "off":
+                    # Sensor confirms closed - success, no obstacle
+                    pass
+                elif sensor_state and sensor_state.state in ["on", "unavailable", "unknown"]:
+                    # Sensor doesn't confirm closed - obstacle detected
+                    obstacle_detected = True
+                    _LOGGER.warning(
+                        "Obstacle detected on %s: closed sensor shows %s (expected off)",
+                        self._attr_name,
+                        sensor_state.state,
+                    )
+            elif self._open_sensor:
+                # Single sensor mode (only open sensor): check it's NOT open
+                sensor_state = self.hass.states.get(self._open_sensor)
+                if sensor_state and sensor_state.state == "off":
+                    # Sensor shows NOT open - success, no obstacle
+                    pass
+                elif sensor_state and sensor_state.state in ["on", "unavailable", "unknown"]:
+                    # Sensor still shows open - obstacle detected
+                    obstacle_detected = True
+                    _LOGGER.warning(
+                        "Obstacle detected on %s: open sensor shows %s (expected off when closing)",
+                        self._attr_name,
+                        sensor_state.state,
+                    )
         
         if obstacle_detected:
             await self._handle_obstacle()
