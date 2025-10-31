@@ -900,6 +900,24 @@ class AutoCover(CoverEntity, RestoreEntity):
                         self._manual_operation_count += 1
                     
                     self.async_write_ha_state()
+            
+            elif new_state.state == "on" and not self._open_sensor:
+                # Closed sensor "on" means NOT closed
+                # In single-sensor mode (no open sensor), only infer cover is open if NOT currently moving
+                # (during movement, "on" just means "left closed position", not "reached open position")
+                if self._state not in [CoverState.OPENING, CoverState.CLOSING]:
+                    if self._position != 100 or self._state != CoverState.OPEN:
+                        old_state = self._state
+                        
+                        _LOGGER.info("Sensor detected cover %s is open (closed sensor inactive, was at %d%%)",
+                                    self._attr_name, self._position)
+                        
+                        self._position = 100
+                        self._state = CoverState.OPEN
+                        self._next_direction = "DOWN"
+                        self._manual_operation_count += 1
+                        
+                        self.async_write_ha_state()
         
         # Handle open sensor changes
         elif entity_id == self._open_sensor:
@@ -929,6 +947,24 @@ class AutoCover(CoverEntity, RestoreEntity):
                         self._manual_operation_count += 1
                     
                     self.async_write_ha_state()
+            
+            elif new_state.state == "off" and not self._closed_sensor:
+                # Open sensor "off" means NOT open
+                # In single-sensor mode (no closed sensor), only infer cover is closed if NOT currently moving
+                # (during movement, "off" just means "left open position", not "reached closed position")
+                if self._state not in [CoverState.OPENING, CoverState.CLOSING]:
+                    if self._position != 0 or self._state != CoverState.CLOSED:
+                        old_state = self._state
+                        
+                        _LOGGER.info("Sensor detected cover %s is closed (open sensor inactive, was at %d%%)",
+                                    self._attr_name, self._position)
+                        
+                        self._position = 0
+                        self._state = CoverState.CLOSED
+                        self._next_direction = "UP"
+                        self._manual_operation_count += 1
+                        
+                        self.async_write_ha_state()
 
     async def _sync_position_from_sensors(self) -> None:
         """Synchronize position from sensor states."""
