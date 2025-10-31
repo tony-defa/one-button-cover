@@ -1,8 +1,8 @@
-"""Constants for the Auto Cover integration."""
+"""Constants for the One Button Cover integration."""
 from enum import Enum
 
 # Integration domain
-DOMAIN = "autocover"
+DOMAIN = "one_button_cover"
 
 # Configuration keys
 CONF_BUTTON_ENTITY = "button_entity"

@@ -1,4 +1,4 @@
-"""Config flow for Auto Cover integration."""
+"""Config flow for One Button Cover integration."""
 from __future__ import annotations
 
 import logging
@@ -164,8 +164,8 @@ async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str
     return errors
 
 
-class AutoCoverConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Auto Cover integration."""
+class OneButtonCoverConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for One Button Cover integration."""
 
     VERSION = 1
 
@@ -202,10 +202,10 @@ class AutoCoverConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 button_state = self.hass.states.get(button_entity_id)
                 
                 if button_state and button_state.attributes.get("friendly_name"):
-                    title = f"Auto Cover - {button_state.attributes['friendly_name']}"
+                    title = f"One Button Cover - {button_state.attributes['friendly_name']}"
                 else:
                     # Fallback to entity ID if friendly name not available
-                    title = f"Auto Cover - {button_entity_id.split('.')[1].replace('_', ' ').title()}"
+                    title = f"One Button Cover - {button_entity_id.split('.')[1].replace('_', ' ').title()}"
 
                 # Create the config entry
                 return self.async_create_entry(

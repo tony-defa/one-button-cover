@@ -1,10 +1,10 @@
-# Auto Cover Integration Test Suite
+# One Button Cover Integration Test Suite
 
-This directory contains comprehensive tests for the Home Assistant Auto Cover integration. The test suite validates all functionality and ensures robustness of the virtual cover entity implementation.
+This directory contains comprehensive tests for the Home Assistant One Button Cover integration. The test suite validates all functionality and ensures robustness of the virtual cover entity implementation.
 
 ## Overview
 
-The Auto Cover integration creates a virtual cover entity from a button entity and optional contact sensors. This test suite covers:
+The One Button Cover integration creates a virtual cover entity from a button entity and optional contact sensors. This test suite covers:
 
 - **Config Flow Validation** - Input validation, schema handling, and configuration management
 - **Cover Entity Operations** - Basic operations (open, close, stop, set position) and state management
@@ -41,7 +41,7 @@ Tests for the configuration flow implementation:
 - Extreme but valid timing values are accepted
 
 ### `test_cover.py` - Core Cover Entity Tests
-Comprehensive tests for the main AutoCover entity class:
+Comprehensive tests for the main OneButtonCover entity class:
 
 - **Initialization** - Proper entity setup with configuration parameters
 - **Properties** - Current position, state properties, device info, attributes
@@ -138,13 +138,13 @@ pytest tests/
 pytest tests/test_cover.py
 
 # Run with coverage
-pytest tests/ --cov=custom_components.autocover --cov-report=html
+pytest tests/ --cov=custom_components.one_button_cover --cov-report=html
 
 # Run with verbose output
 pytest tests/ -v
 
 # Run specific test class or method
-pytest tests/test_cover.py::TestAutoCoverBasicOperations::test_open_cover_from_closed_state -v
+pytest tests/test_cover.py::TestOneButtonCoverBasicOperations::test_open_cover_from_closed_state -v
 ```
 
 ### Test Configuration
@@ -225,10 +225,10 @@ The test suite aims for >90% code coverage of the integration code:
 pytest tests/ -v -s --tb=short
 
 # Run specific failing test with detailed output
-pytest tests/test_cover.py::TestAutoCoverBasicOperations::test_open_cover_from_closed_state -v -s --tb=long
+pytest tests/test_cover.py::TestOneButtonCoverBasicOperations::test_open_cover_from_closed_state -v -s --tb=long
 
 # Check test coverage
-pytest tests/ --cov=custom_components.autocover --cov-report=term-missing
+pytest tests/ --cov=custom_components.one_button_cover --cov-report=term-missing
 
 # Run tests in specific order
 pytest tests/ --setup-plan
@@ -244,10 +244,10 @@ The test suite is designed to run in CI/CD pipelines:
 pytest tests/ --tb=short -q
 
 # Coverage reporting for CI
-pytest tests/ --cov=custom_components.autocover --cov-report=xml --cov-report=term
+pytest tests/ --cov=custom_components.one_button_cover --cov-report=xml --cov-report=term
 
 # Fail build on low coverage
-pytest tests/ --cov=custom_components.autocover --cov-fail-under=90
+pytest tests/ --cov=custom_components.one_button_cover --cov-fail-under=90
 ```
 
 ### Test Parallelization

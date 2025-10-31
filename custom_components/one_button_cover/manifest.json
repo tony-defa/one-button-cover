@@ -1,6 +1,6 @@
 {
-  "domain": "autocover",
-  "name": "Auto Cover",
+  "domain": "one_button_cover",
+  "name": "One Button Cover",
   "codeowners": [],
   "config_flow": true,
   "dependencies": [],

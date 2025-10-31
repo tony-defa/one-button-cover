@@ -1,4 +1,4 @@
-"""Tests for Auto Cover entity functionality."""
+"""Tests for One Button Cover entity functionality."""
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +15,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import State
 
-from custom_components.autocover.const import (
+from custom_components.one_button_cover.const import (
     BUTTON_ACTIVATION_TIME,
     CONF_BUTTON_ENTITY,
     CONF_CLOSED_SENSOR,
@@ -29,17 +29,17 @@ from custom_components.autocover.const import (
     MAX_RETRIES,
     POSITION_UPDATE_INTERVAL,
 )
-from custom_components.autocover.cover import AutoCover, async_setup_entry
+from custom_components.one_button_cover.cover import OneButtonCover, async_setup_entry
 
 
-class TestAutoCoverInitialization:
-    """Test cases for Auto Cover initialization."""
+class TestOneButtonCoverInitialization:
+    """Test cases for One Button Cover initialization."""
 
-    async def test_auto_cover_initializes_with_correct_properties(self, auto_cover):
-        """Test that AutoCover initializes with correct properties."""
-        cover = auto_cover
+    async def test_one_button_cover_initializes_with_correct_properties(self, one_button_cover):
+        """Test that OneButtonCover initializes with correct properties."""
+        cover = one_button_cover
 
-        assert cover._attr_name == "Test Auto Cover"
+        assert cover._attr_name == "Test One Button Cover"
         assert cover._button_entity == "button.test_button"
         assert cover._time_to_open == 30.0
         assert cover._time_to_close == 25.0
@@ -49,9 +49,9 @@ class TestAutoCoverInitialization:
         assert cover._state == CoverState.CLOSED
         assert cover._position == 0
 
-    async def test_auto_cover_initializes_with_minimal_config(self, hass, minimal_config_entry):
-        """Test that AutoCover initializes with minimal configuration."""
-        cover = AutoCover(
+    async def test_one_button_cover_initializes_with_minimal_config(self, hass, minimal_config_entry):
+        """Test that OneButtonCover initializes with minimal configuration."""
+        cover = OneButtonCover(
             hass=hass,
             name=minimal_config_entry.title,
             unique_id=minimal_config_entry.entry_id,
@@ -67,9 +67,9 @@ class TestAutoCoverInitialization:
         assert cover._open_sensor is None
         assert cover._threshold == 10
 
-    async def test_auto_cover_has_correct_supported_features(self, auto_cover):
-        """Test that AutoCover has correct supported features."""
-        cover = auto_cover
+    async def test_one_button_cover_has_correct_supported_features(self, one_button_cover):
+        """Test that OneButtonCover has correct supported features."""
+        cover = one_button_cover
 
         expected_features = (
             CoverEntityFeature.OPEN
@@ -79,24 +79,24 @@ class TestAutoCoverInitialization:
         )
         assert cover._attr_supported_features == expected_features
 
-    async def test_auto_cover_device_info_is_correct(self, auto_cover, config_entry):
-        """Test that AutoCover device info is correct."""
-        cover = auto_cover
+    async def test_one_button_cover_device_info_is_correct(self, one_button_cover, config_entry):
+        """Test that OneButtonCover device info is correct."""
+        cover = one_button_cover
 
         device_info = cover.device_info
         assert device_info["identifiers"] == {(DOMAIN, config_entry.entry_id)}
         assert device_info["name"] == config_entry.title
-        assert device_info["manufacturer"] == "Auto Cover"
+        assert device_info["manufacturer"] == "One Button Cover"
         assert device_info["model"] == "Virtual Cover"
         assert device_info["sw_version"] == "1.0"
 
 
-class TestAutoCoverProperties:
-    """Test cases for Auto Cover properties."""
+class TestOneButtonCoverProperties:
+    """Test cases for One Button Cover properties."""
 
-    async def test_current_cover_position_returns_correct_value(self, auto_cover):
+    async def test_current_cover_position_returns_correct_value(self, one_button_cover):
         """Test that current_cover_position returns correct value."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Set position and test
         cover._position = 75.5
@@ -110,9 +110,9 @@ class TestAutoCoverProperties:
         cover._position = 100
         assert cover.current_cover_position == 100
 
-    async def test_is_opening_returns_correct_state(self, auto_cover):
+    async def test_is_opening_returns_correct_state(self, one_button_cover):
         """Test that is_opening returns correct state."""
-        cover = auto_cover
+        cover = one_button_cover
 
         cover._state = CoverState.OPENING
         assert cover.is_opening is True
@@ -120,9 +120,9 @@ class TestAutoCoverProperties:
         cover._state = CoverState.CLOSED
         assert cover.is_opening is False
 
-    async def test_is_closing_returns_correct_state(self, auto_cover):
+    async def test_is_closing_returns_correct_state(self, one_button_cover):
         """Test that is_closing returns correct state."""
-        cover = auto_cover
+        cover = one_button_cover
 
         cover._state = CoverState.CLOSING
         assert cover.is_closing is True
@@ -130,9 +130,9 @@ class TestAutoCoverProperties:
         cover._state = CoverState.OPEN
         assert cover.is_closing is False
 
-    async def test_is_closed_returns_correct_state(self, auto_cover):
+    async def test_is_closed_returns_correct_state(self, one_button_cover):
         """Test that is_closed returns correct state."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Test closed by position
         cover._position = 0
@@ -149,9 +149,9 @@ class TestAutoCoverProperties:
         cover._state = CoverState.OPEN
         assert cover.is_closed is False
 
-    async def test_extra_state_attributes_returns_complete_info(self, auto_cover, mock_time):
+    async def test_extra_state_attributes_returns_complete_info(self, one_button_cover, mock_time):
         """Test that extra_state_attributes returns complete information."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Set some state for testing
         cover._position = 75
@@ -181,7 +181,7 @@ class TestAutoCoverProperties:
 
     async def test_extra_state_attributes_with_no_sensors(self, hass, minimal_config_entry, mock_time):
         """Test extra_state_attributes when no sensors are configured."""
-        cover = AutoCover(
+        cover = OneButtonCover(
             hass=hass,
             name=minimal_config_entry.title,
             unique_id=minimal_config_entry.entry_id,
@@ -200,7 +200,7 @@ class TestAutoCoverProperties:
 
     async def test_extra_state_attributes_with_single_sensor(self, hass, config_entry, mock_time):
         """Test extra_state_attributes with only one sensor configured."""
-        cover = AutoCover(
+        cover = OneButtonCover(
             hass=hass,
             name=config_entry.title,
             unique_id=config_entry.entry_id,
@@ -218,12 +218,12 @@ class TestAutoCoverProperties:
         assert attrs["sensor_closed_entity"] == "binary_sensor.closed_sensor"
 
 
-class TestAutoCoverBasicOperations:
+class TestOneButtonCoverBasicOperations:
     """Test cases for basic cover operations."""
 
-    async def test_open_cover_from_closed_state(self, auto_cover, mock_time):
+    async def test_open_cover_from_closed_state(self, one_button_cover, mock_time):
         """Test opening cover from closed state."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in closed state
         cover._state = CoverState.CLOSED
@@ -237,9 +237,9 @@ class TestAutoCoverBasicOperations:
         assert cover._movement_start_position == 0
         assert cover._movement_duration == 30.0  # time_to_open
 
-    async def test_close_cover_from_open_state(self, auto_cover, mock_time):
+    async def test_close_cover_from_open_state(self, one_button_cover, mock_time):
         """Test closing cover from open state."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in open state
         cover._state = CoverState.OPEN
@@ -253,9 +253,9 @@ class TestAutoCoverBasicOperations:
         assert cover._movement_start_position == 100
         assert cover._movement_duration == 25.0  # time_to_close
 
-    async def test_stop_cover_during_movement(self, auto_cover, mock_time):
+    async def test_stop_cover_during_movement(self, one_button_cover, mock_time):
         """Test stopping cover during movement."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in opening state
         cover._state = CoverState.OPENING
@@ -272,9 +272,9 @@ class TestAutoCoverBasicOperations:
         # Should have called button press service
         cover.hass.services.async_call.assert_called_once()
 
-    async def test_stop_cover_when_not_moving_does_not_call_service(self, auto_cover, mock_button_press_service, mock_time):
+    async def test_stop_cover_when_not_moving_does_not_call_service(self, one_button_cover, mock_button_press_service, mock_time):
         """Test stopping cover when not moving doesn't call button service."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in halted state (not moving)
         cover._state = CoverState.HALTED
@@ -286,9 +286,9 @@ class TestAutoCoverBasicOperations:
         mock_button_press_service.assert_not_called()
         assert cover._state == CoverState.HALTED
 
-    async def test_set_cover_position_with_valid_position(self, auto_cover, mock_button_press_service, mock_time):
+    async def test_set_cover_position_with_valid_position(self, one_button_cover, mock_button_press_service, mock_time):
         """Test setting cover to specific position."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start at position 0
         cover._state = CoverState.CLOSED
@@ -305,9 +305,9 @@ class TestAutoCoverBasicOperations:
         expected_duration = (75 / 100) * 30.0
         assert cover._movement_duration == expected_duration
 
-    async def test_set_cover_position_downward_movement(self, auto_cover, mock_button_press_service, mock_time):
+    async def test_set_cover_position_downward_movement(self, one_button_cover, mock_button_press_service, mock_time):
         """Test setting cover to lower position (downward movement)."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start at position 100
         cover._state = CoverState.OPEN
@@ -324,9 +324,9 @@ class TestAutoCoverBasicOperations:
         expected_duration = (75 / 100) * 25.0
         assert cover._movement_duration == expected_duration
 
-    async def test_set_cover_position_already_at_target_ignores_command(self, auto_cover, mock_button_press_service, mock_time):
+    async def test_set_cover_position_already_at_target_ignores_command(self, one_button_cover, mock_button_press_service, mock_time):
         """Test setting cover to current position ignores command."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start at position 50
         cover._state = CoverState.HALTED
@@ -339,9 +339,9 @@ class TestAutoCoverBasicOperations:
         assert cover._position == 50
         mock_button_press_service.assert_not_called()
 
-    async def test_set_cover_position_with_tolerance_ignores_close_positions(self, auto_cover, mock_button_press_service, mock_time):
+    async def test_set_cover_position_with_tolerance_ignores_close_positions(self, one_button_cover, mock_button_press_service, mock_time):
         """Test setting cover position with tolerance ignores very close positions."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start at position 50
         cover._state = CoverState.HALTED
@@ -356,12 +356,12 @@ class TestAutoCoverBasicOperations:
         mock_button_press_service.assert_not_called()
 
 
-class TestAutoCoverDebouncing:
+class TestOneButtonCoverDebouncing:
     """Test cases for command debouncing functionality."""
 
-    async def test_rapid_commands_are_debounced(self, auto_cover, mock_time):
+    async def test_rapid_commands_are_debounced(self, one_button_cover, mock_time):
         """Test that rapid commands are debounced."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # First command should be accepted
         with patch.object(cover, "_press_button") as mock_press:
@@ -373,15 +373,15 @@ class TestAutoCoverDebouncing:
             await cover.async_close_cover()
             mock_press.assert_not_called()
 
-    async def test_commands_after_debounce_time_are_accepted(self, auto_cover, mock_time):
+    async def test_commands_after_debounce_time_are_accepted(self, one_button_cover, mock_time):
         """Test that commands after debounce time are accepted."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # First command
         await cover.async_open_cover()
 
         # Mock time to simulate debounce time passing
-        with patch("custom_components.autocover.cover.datetime") as mock_dt:
+        with patch("custom_components.one_button_cover.cover.datetime") as mock_dt:
             # Advance time by more than debounce time
             mock_dt.now.return_value = mock_time + timedelta(seconds=DEBOUNCE_TIME + 0.1)
             mock_dt.side_effect = lambda *args, **kwargs: (
@@ -395,9 +395,9 @@ class TestAutoCoverDebouncing:
                 # Should be called at least once (may be more if stop+close)
                 assert mock_press.call_count >= 1
 
-    async def test_disabled_cover_ignores_commands(self, auto_cover, mock_button_press_service):
+    async def test_disabled_cover_ignores_commands(self, one_button_cover, mock_button_press_service):
         """Test that disabled cover ignores all commands."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Disable the cover
         cover._disabled = True
@@ -412,12 +412,12 @@ class TestAutoCoverDebouncing:
         mock_button_press_service.assert_not_called()
 
 
-class TestAutoCoverStateTransitions:
+class TestOneButtonCoverStateTransitions:
     """Test cases for state transitions."""
 
-    async def test_open_from_closing_state_stops_then_opens(self, auto_cover, mock_time):
+    async def test_open_from_closing_state_stops_then_opens(self, one_button_cover, mock_time):
         """Test opening from closing state stops first, then opens."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in closing state
         cover._state = CoverState.CLOSING
@@ -431,9 +431,9 @@ class TestAutoCoverStateTransitions:
         # Final state should be opening
         assert cover._state == CoverState.OPENING
 
-    async def test_close_from_opening_state_stops_then_closes(self, auto_cover, mock_time):
+    async def test_close_from_opening_state_stops_then_closes(self, one_button_cover, mock_time):
         """Test closing from opening state stops first, then closes."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in opening state
         cover._state = CoverState.OPENING
@@ -447,9 +447,9 @@ class TestAutoCoverStateTransitions:
         # Final state should be closing
         assert cover._state == CoverState.CLOSING
 
-    async def test_open_from_already_open_state_logs_debug(self, auto_cover, config_entry, mock_logger, mock_time):
+    async def test_open_from_already_open_state_logs_debug(self, one_button_cover, config_entry, mock_logger, mock_time):
         """Test opening from already open state logs debug message."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in open state
         cover._state = CoverState.OPEN
@@ -461,9 +461,9 @@ class TestAutoCoverStateTransitions:
         # Should log debug message
         mock_logger.debug.assert_called_once_with("Cover %s is already open", config_entry.title)
 
-    async def test_close_from_already_closed_state_logs_debug(self, auto_cover, mock_logger, mock_time):
+    async def test_close_from_already_closed_state_logs_debug(self, one_button_cover, mock_logger, mock_time):
         """Test closing from already closed state logs debug message."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in closed state
         cover._state = CoverState.CLOSED
@@ -473,15 +473,15 @@ class TestAutoCoverStateTransitions:
             await cover.async_close_cover()
 
         # Should log debug message
-        mock_logger.debug.assert_called_once_with("Cover %s is already closed", "Test Auto Cover")
+        mock_logger.debug.assert_called_once_with("Cover %s is already closed", "Test One Button Cover")
 
 
-class TestAutoCoverPositionTracking:
+class TestOneButtonCoverPositionTracking:
     """Test cases for position tracking functionality."""
 
-    async def test_position_updates_during_movement(self, auto_cover, mock_time):
+    async def test_position_updates_during_movement(self, one_button_cover, mock_time):
         """Test that position updates correctly during movement."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start opening from position 0
         cover._position = 0
@@ -493,7 +493,7 @@ class TestAutoCoverPositionTracking:
         cover._state = CoverState.OPENING
 
         # Simulate time passing (15 seconds into 30 second movement)
-        with patch("custom_components.autocover.cover.datetime") as mock_dt:
+        with patch("custom_components.one_button_cover.cover.datetime") as mock_dt:
             later_time = mock_time + timedelta(seconds=15)
             mock_dt.now.return_value = later_time
 
@@ -503,9 +503,9 @@ class TestAutoCoverPositionTracking:
             # Should be at 50% (15/30 * 100)
             assert abs(cover._position - 50.0) < 0.1
 
-    async def test_position_updates_during_closing_movement(self, auto_cover, mock_time):
+    async def test_position_updates_during_closing_movement(self, one_button_cover, mock_time):
         """Test that position updates correctly during closing movement."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start closing from position 100
         cover._position = 100
@@ -517,7 +517,7 @@ class TestAutoCoverPositionTracking:
         cover._state = CoverState.CLOSING
 
         # Simulate time passing (10 seconds into 25 second movement)
-        with patch("custom_components.autocover.cover.datetime") as mock_dt:
+        with patch("custom_components.one_button_cover.cover.datetime") as mock_dt:
             later_time = mock_time + timedelta(seconds=10)
             mock_dt.now.return_value = later_time
 
@@ -528,9 +528,9 @@ class TestAutoCoverPositionTracking:
             expected_position = 100 - (10 / 25 * 100)
             assert abs(cover._position - expected_position) < 0.1
 
-    async def test_partial_position_movement_calculates_correct_duration(self, auto_cover, mock_time):
+    async def test_partial_position_movement_calculates_correct_duration(self, one_button_cover, mock_time):
         """Test that partial position movements calculate correct duration."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start at position 25, move to 75 (50% of full range)
         cover._position = 25
@@ -547,12 +547,12 @@ class TestAutoCoverPositionTracking:
         assert cover._target_position == 75
 
 
-class TestAutoCoverButtonPress:
+class TestOneButtonCoverButtonPress:
     """Test cases for button press functionality."""
 
-    async def test_button_press_with_waiting_for_active_button(self, auto_cover, mock_button_press_service, mock_time):
+    async def test_button_press_with_waiting_for_active_button(self, one_button_cover, mock_button_press_service, mock_time):
         """Test button press waits for currently active button."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Simulate button currently being pressed
         cover._button_pressing = True
@@ -568,9 +568,9 @@ class TestAutoCoverButtonPress:
             wait_time = mock_sleep.call_args[0][0]
             assert wait_time >= BUTTON_ACTIVATION_TIME
 
-    async def test_button_press_resets_failure_count_on_success(self, auto_cover, mock_button_press_service):
+    async def test_button_press_resets_failure_count_on_success(self, one_button_cover, mock_button_press_service):
         """Test that successful button press resets failure count."""
-        cover = auto_cover
+        cover = one_button_cover
         
         # Simulate previous failures
         cover._failure_count = 2
@@ -583,9 +583,9 @@ class TestAutoCoverButtonPress:
         # Failure count should be reset on success
         assert cover._failure_count == 0
 
-    async def test_button_press_handles_service_call_failure(self, auto_cover, mock_button_press_service):
+    async def test_button_press_handles_service_call_failure(self, one_button_cover, mock_button_press_service):
         """Test that button press handles service call failure."""
-        cover = auto_cover
+        cover = one_button_cover
         
         # Mock service call to raise exception
         cover.hass.services.async_call.side_effect = Exception("Service call failed")
@@ -598,9 +598,9 @@ class TestAutoCoverButtonPress:
         # Failure count should increase
         assert cover._failure_count == 1
 
-    async def test_button_press_disables_cover_after_max_retries(self, auto_cover, mock_button_press_service, mock_logger):
+    async def test_button_press_disables_cover_after_max_retries(self, one_button_cover, mock_button_press_service, mock_logger):
         """Test that cover is disabled after maximum retry attempts."""
-        cover = auto_cover
+        cover = one_button_cover
         
         # Mock service call to always fail
         cover.hass.services.async_call.side_effect = Exception("Service call failed")
@@ -619,17 +619,17 @@ class TestAutoCoverButtonPress:
 
         # Should log error about disabling (check it was called with these args)
         assert any(
-            call[0] == ("Cover %s disabled after %d consecutive failures", "Test Auto Cover", MAX_RETRIES)
+            call[0] == ("Cover %s disabled after %d consecutive failures", "Test One Button Cover", MAX_RETRIES)
             for call in mock_logger.error.call_args_list
         )
 
 
-class TestAutoCoverStateRestoration:
+class TestOneButtonCoverStateRestoration:
     """Test cases for state restoration after restart."""
 
-    async def test_state_restoration_from_open_state(self, auto_cover, mock_time):
+    async def test_state_restoration_from_open_state(self, one_button_cover, mock_time):
         """Test state restoration from open state."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Mock last state as open
         last_state = MagicMock(spec=State)
@@ -652,9 +652,9 @@ class TestAutoCoverStateRestoration:
         assert cover._obstacle_detected_count == 0
         assert cover._manual_operation_count == 0
 
-    async def test_state_restoration_from_opening_state_converts_to_halted(self, auto_cover, mock_time, mock_logger):
+    async def test_state_restoration_from_opening_state_converts_to_halted(self, one_button_cover, mock_time, mock_logger):
         """Test that opening/closing state is converted to halted on restoration."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Mock last state as opening
         last_state = MagicMock(spec=State)
@@ -673,9 +673,9 @@ class TestAutoCoverStateRestoration:
         # Should log the state conversion
         mock_logger.info.assert_called_once()
 
-    async def test_state_restoration_with_no_previous_state_defaults_to_closed(self, auto_cover, mock_time):
+    async def test_state_restoration_with_no_previous_state_defaults_to_closed(self, one_button_cover, mock_time):
         """Test that missing previous state defaults to closed."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Mock no last state
         with patch.object(cover, "async_get_last_state", return_value=None):
@@ -686,16 +686,16 @@ class TestAutoCoverStateRestoration:
         assert cover._position == 0
 
 
-class TestAutoCoverLifecycle:
+class TestOneButtonCoverLifecycle:
     """Test cases for entity lifecycle management."""
 
-    async def test_added_to_hass_registers_sensor_listeners(self, auto_cover, mock_time):
+    async def test_added_to_hass_registers_sensor_listeners(self, one_button_cover, mock_time):
         """Test that added_to_hass registers sensor state change listeners."""
-        cover = auto_cover
+        cover = one_button_cover
 
         with patch.object(cover, "async_get_last_state", return_value=None):
             with patch.object(cover, "_sync_position_from_sensors"):
-                with patch("custom_components.autocover.cover.async_track_state_change_event") as mock_track:
+                with patch("custom_components.one_button_cover.cover.async_track_state_change_event") as mock_track:
                     await cover.async_added_to_hass()
 
                     # Should register listeners for both sensors
@@ -703,7 +703,7 @@ class TestAutoCoverLifecycle:
 
     async def test_added_to_hass_with_no_sensors_registers_no_listeners(self, hass, minimal_config_entry, mock_time):
         """Test that added_to_hass with no sensors registers no listeners."""
-        cover = AutoCover(
+        cover = OneButtonCover(
             hass=hass,
             name=minimal_config_entry.title,
             unique_id=minimal_config_entry.entry_id,
@@ -717,15 +717,15 @@ class TestAutoCoverLifecycle:
 
         with patch.object(cover, "async_get_last_state", return_value=None):
             with patch.object(cover, "_sync_position_from_sensors"):
-                with patch("custom_components.autocover.cover.async_track_state_change_event") as mock_track:
+                with patch("custom_components.one_button_cover.cover.async_track_state_change_event") as mock_track:
                     await cover.async_added_to_hass()
 
                     # Should not register any listeners
                     mock_track.assert_not_called()
 
-    async def test_will_remove_from_hass_cleans_up_resources(self, auto_cover):
+    async def test_will_remove_from_hass_cleans_up_resources(self, one_button_cover):
         """Test that will_remove_from_hass cleans up all resources."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Set up some resources that need cleanup with proper mock structure
         mock_position_handle = MagicMock()

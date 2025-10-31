@@ -1,4 +1,4 @@
-# Test requirements for Auto Cover integration
+# Test requirements for One Button Cover integration
 pytest>=7.0.0
 pytest-homeassistant-custom-component>=0.13.0
 pytest-asyncio>=0.21.0

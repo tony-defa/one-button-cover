@@ -1,4 +1,4 @@
-"""Pytest fixtures and test setup for Auto Cover integration tests."""
+"""Pytest fixtures and test setup for One Button Cover integration tests."""
 from __future__ import annotations
 
 import os
@@ -33,7 +33,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from custom_components.autocover.const import (
+from custom_components.one_button_cover.const import (
     CONF_BUTTON_ENTITY,
     CONF_CLOSED_SENSOR,
     CONF_OPEN_SENSOR,
@@ -75,7 +75,7 @@ def config_entry():
     """Create a mock config entry."""
     entry = MagicMock(spec=config_entries.ConfigEntry)
     entry.entry_id = "test_entry_id"
-    entry.title = "Test Auto Cover"
+    entry.title = "Test One Button Cover"
     entry.data = {
         CONF_BUTTON_ENTITY: "button.test_button",
         CONF_TIME_TO_OPEN: 30.0,
@@ -92,7 +92,7 @@ def minimal_config_entry():
     """Create a minimal config entry with only required fields."""
     entry = MagicMock(spec=config_entries.ConfigEntry)
     entry.entry_id = "test_minimal_entry_id"
-    entry.title = "Test Auto Cover Minimal"
+    entry.title = "Test One Button Cover Minimal"
     entry.data = {
         CONF_BUTTON_ENTITY: "button.test_button",
         CONF_TIME_TO_OPEN: 30.0,
@@ -102,11 +102,11 @@ def minimal_config_entry():
 
 
 @pytest.fixture
-def auto_cover(hass, config_entry):
-    """Create an AutoCover instance with proper initialization."""
-    from custom_components.autocover.cover import AutoCover
+def one_button_cover(hass, config_entry):
+    """Create an OneButtonCover instance with proper initialization."""
+    from custom_components.one_button_cover.cover import OneButtonCover
     
-    cover = AutoCover(
+    cover = OneButtonCover(
         hass=hass,
         name=config_entry.title,
         unique_id=config_entry.entry_id,
@@ -235,7 +235,7 @@ def mock_time():
     """Mock datetime.now() for consistent time-based tests."""
     fake_now = datetime(2023, 1, 1, 12, 0, 0)
 
-    with patch("custom_components.autocover.cover.datetime") as mock_dt:
+    with patch("custom_components.one_button_cover.cover.datetime") as mock_dt:
         mock_dt.now.return_value = fake_now
         mock_dt.side_effect = lambda *args, **kwargs: fake_now if args == () and kwargs == {} else datetime(*args, **kwargs)
         yield fake_now
@@ -337,7 +337,7 @@ def auto_mock_dependencies():
     
     # Patch both the function and where it's imported in config_flow
     with patch("homeassistant.helpers.entity_registry.async_get", return_value=registry):
-        with patch("custom_components.autocover.config_flow.async_get_entity_registry", return_value=registry):
+        with patch("custom_components.one_button_cover.config_flow.async_get_entity_registry", return_value=registry):
             yield registry
 
 
@@ -365,7 +365,7 @@ def cleanup_listeners():
 @pytest.fixture
 def mock_logger():
     """Mock logger to capture log messages."""
-    with patch("custom_components.autocover.cover._LOGGER") as mock_log:
+    with patch("custom_components.one_button_cover.cover._LOGGER") as mock_log:
         yield mock_log
 
 

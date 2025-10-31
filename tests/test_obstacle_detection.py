@@ -1,4 +1,4 @@
-"""Tests for Auto Cover obstacle detection functionality."""
+"""Tests for One Button Cover obstacle detection functionality."""
 from __future__ import annotations
 
 import asyncio
@@ -9,7 +9,7 @@ import pytest
 from homeassistant.const import STATE_CLOSED, STATE_OPEN
 from homeassistant.core import State
 
-from custom_components.autocover.const import (
+from custom_components.one_button_cover.const import (
     CONF_BUTTON_ENTITY,
     CONF_CLOSED_SENSOR,
     CONF_OPEN_SENSOR,
@@ -20,16 +20,16 @@ from custom_components.autocover.const import (
     DEFAULT_THRESHOLD,
     DOMAIN,
 )
-from custom_components.autocover.cover import AutoCover
+from custom_components.one_button_cover.cover import OneButtonCover
 
 
-class TestAutoCoverObstacleDetection:
+class TestOneButtonCoverObstacleDetection:
     """Test cases for obstacle detection with sensors."""
 
 
-    async def test_obstacle_detection_with_single_sensor_ignores_obstacle(self, auto_cover, mock_time):
+    async def test_obstacle_detection_with_single_sensor_ignores_obstacle(self, one_button_cover, mock_time):
         """Test that single sensor trigger doesn't cause obstacle detection."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start opening movement
         cover._state = CoverState.OPENING
@@ -49,9 +49,9 @@ class TestAutoCoverObstacleDetection:
                 # Should not handle obstacle (single sensor)
                 mock_handle_obstacle.assert_not_called()
 
-    async def test_obstacle_detection_with_no_movement_ignores_obstacle(self, auto_cover, mock_time):
+    async def test_obstacle_detection_with_no_movement_ignores_obstacle(self, one_button_cover, mock_time):
         """Test that obstacle detection is ignored when not moving."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Not moving (halted state)
         cover._state = CoverState.HALTED
@@ -75,7 +75,7 @@ class TestAutoCoverObstacleDetection:
 
     async def test_obstacle_check_with_no_sensors_does_not_schedule(self, hass, minimal_config_entry, mock_time):
         """Test that obstacle check is not scheduled without sensors."""
-        cover = AutoCover(
+        cover = OneButtonCover(
             hass=hass,
             name=minimal_config_entry.title,
             unique_id=minimal_config_entry.entry_id,
@@ -96,9 +96,9 @@ class TestAutoCoverObstacleDetection:
             mock_call_later.assert_not_called()
             assert cover._obstacle_check_handle is None
 
-    async def test_sensor_sync_with_conflicting_sensors_sets_to_halted(self, auto_cover, mock_time):
+    async def test_sensor_sync_with_conflicting_sensors_sets_to_halted(self, one_button_cover, mock_time):
         """Test that conflicting sensors result in halted state."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Mock conflicting sensor states
         with patch.object(cover.hass.states, "get") as mock_get:
@@ -117,9 +117,9 @@ class TestAutoCoverObstacleDetection:
             assert cover._state == CoverState.CLOSED  # Default state
             assert cover._position == 0  # Default position
 
-    async def test_sensor_change_during_movement_updates_manual_operation_count(self, auto_cover, mock_time):
+    async def test_sensor_change_during_movement_updates_manual_operation_count(self, one_button_cover, mock_time):
         """Test that unexpected sensor changes during movement increment manual operation count."""
-        cover = auto_cover
+        cover = one_button_cover
 
         # Start in opening state
         cover._state = CoverState.OPENING

@@ -1,4 +1,4 @@
-"""Tests for Auto Cover config flow."""
+"""Tests for One Button Cover config flow."""
 from __future__ import annotations
 
 import pytest
@@ -8,8 +8,8 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from custom_components.autocover.config_flow import AutoCoverConfigFlow, _get_schema, _validate_input
-from custom_components.autocover.const import (
+from custom_components.one_button_cover.config_flow import OneButtonCoverConfigFlow, _get_schema, _validate_input
+from custom_components.one_button_cover.const import (
     CONF_BUTTON_ENTITY,
     CONF_CLOSED_SENSOR,
     CONF_OPEN_SENSOR,
@@ -21,8 +21,8 @@ from custom_components.autocover.const import (
 )
 
 
-class TestAutoCoverConfigFlow:
-    """Test cases for the Auto Cover config flow."""
+class TestOneButtonCoverConfigFlow:
+    """Test cases for the One Button Cover config flow."""
 
     def test_get_schema_creates_proper_voluptuous_schema(self):
         """Test that _get_schema creates a proper voluptuous schema."""
@@ -239,8 +239,8 @@ class TestAutoCoverConfigFlow:
         assert errors == {}
 
 
-class TestAutoCoverConfigFlowIntegration:
-    """Integration tests for the Auto Cover config flow."""
+class TestOneButtonCoverConfigFlowIntegration:
+    """Integration tests for the One Button Cover config flow."""
 
     async def test_config_flow_with_valid_data_creates_entry(self, hass, mock_states):
         """Test that the config flow creates an entry with valid data."""
@@ -248,7 +248,7 @@ class TestAutoCoverConfigFlowIntegration:
         hass.config_entries.async_entries.return_value = []
         
         # Mock the flow handler
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -266,7 +266,7 @@ class TestAutoCoverConfigFlowIntegration:
         result = await flow.async_step_user(test_data)
 
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-        assert result["title"] == "Auto Cover - Test Button"
+        assert result["title"] == "One Button Cover - Test Button"
         assert result["data"] == test_data
 
     async def test_config_flow_with_button_friendly_name_creates_proper_title(self, hass, mock_states):
@@ -278,7 +278,7 @@ class TestAutoCoverConfigFlowIntegration:
         button_state = mock_states.states.get("button.test_button")
         button_state.attributes = {"friendly_name": "My Garage Door Button"}
 
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -291,7 +291,7 @@ class TestAutoCoverConfigFlowIntegration:
         result = await flow.async_step_user(test_data)
 
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-        assert result["title"] == "Auto Cover - My Garage Door Button"
+        assert result["title"] == "One Button Cover - My Garage Door Button"
 
     async def test_config_flow_with_button_without_friendly_name_creates_fallback_title(self, hass, mock_states):
         """Test that the config flow creates fallback title when no friendly name."""
@@ -302,7 +302,7 @@ class TestAutoCoverConfigFlowIntegration:
         button_state = mock_states.states.get("button.test_button")
         button_state.attributes = {}
 
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -315,13 +315,13 @@ class TestAutoCoverConfigFlowIntegration:
         result = await flow.async_step_user(test_data)
 
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-        assert result["title"] == "Auto Cover - Garage Door Opener"
+        assert result["title"] == "One Button Cover - Garage Door Opener"
 
     async def test_config_flow_with_invalid_data_shows_form_with_errors(self, hass):
         """Test that the config flow shows form with errors for invalid data."""
         hass.states.async_entity_ids.return_value = []
 
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -343,7 +343,7 @@ class TestAutoCoverConfigFlowIntegration:
         # Mock no existing entries initially
         hass.config_entries.async_entry_for_domain_unique_id.return_value = None
         
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -358,7 +358,7 @@ class TestAutoCoverConfigFlowIntegration:
         assert result1["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
 
         # Try to create duplicate entry
-        flow2 = AutoCoverConfigFlow()
+        flow2 = OneButtonCoverConfigFlow()
         flow2.hass = hass
         flow2.context = {}  # Initialize context as mutable dict
         
@@ -378,7 +378,7 @@ class TestAutoCoverConfigFlowIntegration:
         # Mock no existing entries
         hass.config_entries.async_entries.return_value = []
         
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -400,7 +400,7 @@ class TestAutoCoverConfigFlowIntegration:
         # Mock no existing entries
         hass.config_entries.async_entries.return_value = []
         
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -419,7 +419,7 @@ class TestAutoCoverConfigFlowIntegration:
 
     async def test_config_flow_shows_form_on_initial_load(self, hass):
         """Test that config flow shows form on initial load."""
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 
@@ -432,7 +432,7 @@ class TestAutoCoverConfigFlowIntegration:
         """Test that config flow preserves user input when showing errors."""
         hass.states.async_entity_ids.return_value = []
 
-        flow = AutoCoverConfigFlow()
+        flow = OneButtonCoverConfigFlow()
         flow.hass = hass
         flow.context = {}  # Initialize context as mutable dict
 

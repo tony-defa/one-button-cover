@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Auto Cover",
-        "description": "Configure your Auto Cover integration",
+        "title": "One Button Cover",
+        "description": "Configure your One Button Cover integration",
         "data": {
           "button_entity": "Button Entity",
           "closed_sensor": "Closed Sensor (optional)",

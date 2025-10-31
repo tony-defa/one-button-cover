@@ -1,4 +1,4 @@
-"""Cover platform for Auto Cover integration.
+"""Cover platform for One Button Cover integration.
 
 This module implements a virtual cover entity that controls a physical cover
 through a single button and optional sensors. The cover tracks position based
@@ -55,10 +55,10 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Auto Cover from a config entry."""
+    """Set up the One Button Cover from a config entry."""
     config = config_entry.data
     
-    cover = AutoCover(
+    cover = OneButtonCover(
         hass=hass,
         name=config_entry.title,
         unique_id=config_entry.entry_id,
@@ -77,8 +77,8 @@ async def async_setup_entry(
 # COVER ENTITY IMPLEMENTATION
 # ============================================================================
 
-class AutoCover(CoverEntity, RestoreEntity):
-    """Representation of an Auto Cover.
+class OneButtonCover(CoverEntity, RestoreEntity):
+    """Representation of an One Button Cover.
     
     Implements a virtual cover that controls a physical cover through a single
     button with toggle behavior. Tracks position via timing and synchronizes
@@ -166,7 +166,7 @@ class AutoCover(CoverEntity, RestoreEntity):
         return {
             "identifiers": {(DOMAIN, self._attr_unique_id)},
             "name": self._attr_name,
-            "manufacturer": "Auto Cover",
+            "manufacturer": "One Button Cover",
             "model": "Virtual Cover",
             "sw_version": "1.0",
         }
