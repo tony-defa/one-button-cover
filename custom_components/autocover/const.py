@@ -32,4 +32,6 @@ POSITION_UPDATE_INTERVAL = 0.1  # seconds
 
 # Safety constants
 MAX_RETRIES = 3
-STUCK_TIMEOUT = 5.0  # seconds
+
+# Debounce time for rapid commands (seconds)
+DEBOUNCE_TIME = 0.6

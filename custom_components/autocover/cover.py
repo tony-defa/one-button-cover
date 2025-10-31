@@ -1,4 +1,10 @@
-"""Cover platform for Auto Cover integration."""
+"""Cover platform for Auto Cover integration.
+
+This module implements a virtual cover entity that controls a physical cover
+through a single button and optional sensors. The cover tracks position based
+on timing and handles button toggle behavior, obstacle detection, and sensor
+synchronization.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -35,14 +41,14 @@ from .const import (
     DOMAIN,
     MAX_RETRIES,
     POSITION_UPDATE_INTERVAL,
-    STUCK_TIMEOUT,
+    DEBOUNCE_TIME,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-# Debounce time for rapid commands
-DEBOUNCE_TIME = 0.6  # seconds
-
+# ============================================================================
+# PLATFORM SETUP
+# ============================================================================
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -67,8 +73,21 @@ async def async_setup_entry(
     async_add_entities([cover])
 
 
+# ============================================================================
+# COVER ENTITY IMPLEMENTATION
+# ============================================================================
+
 class AutoCover(CoverEntity, RestoreEntity):
-    """Representation of an Auto Cover."""
+    """Representation of an Auto Cover.
+    
+    Implements a virtual cover that controls a physical cover through a single
+    button with toggle behavior. Tracks position via timing and synchronizes
+    with optional open/closed sensors.
+    """
+
+    # ========================================================================
+    # INITIALIZATION
+    # ========================================================================
 
     def __init__(
         self,
@@ -137,6 +156,10 @@ class AutoCover(CoverEntity, RestoreEntity):
             | CoverEntityFeature.SET_POSITION
         )
 
+    # ========================================================================
+    # ENTITY PROPERTIES
+    # ========================================================================
+
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device information about this cover."""
@@ -193,6 +216,10 @@ class AutoCover(CoverEntity, RestoreEntity):
             "disabled": self._disabled,
             "failure_count": self._failure_count,
         }
+
+    # ========================================================================
+    # LIFECYCLE METHODS
+    # ========================================================================
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks and restore state."""
@@ -271,6 +298,10 @@ class AutoCover(CoverEntity, RestoreEntity):
         for remove_listener in self._sensor_listeners:
             remove_listener()
         self._sensor_listeners.clear()
+
+    # ========================================================================
+    # COVER SERVICE COMMANDS
+    # ========================================================================
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
@@ -369,6 +400,10 @@ class AutoCover(CoverEntity, RestoreEntity):
             await self._start_opening(target_position=position)
         else:
             await self._start_closing(target_position=position)
+
+    # ========================================================================
+    # MOVEMENT CONTROL
+    # ========================================================================
 
     async def _start_opening(self, target_position: int = 100) -> None:
         """Start opening the cover."""
@@ -654,6 +689,10 @@ class AutoCover(CoverEntity, RestoreEntity):
         # For partial positions, just stop
         await self._stop_movement()
 
+    # ========================================================================
+    # OBSTACLE DETECTION
+    # ========================================================================
+
     def _schedule_obstacle_check(self) -> None:
         """Schedule obstacle detection check after threshold time."""
         if self._obstacle_check_handle:
@@ -838,6 +877,10 @@ class AutoCover(CoverEntity, RestoreEntity):
         self.async_write_ha_state()
         
         # Don't press button - let the physical cover handle the reversal
+
+    # ========================================================================
+    # SENSOR SYNCHRONIZATION
+    # ========================================================================
 
     @callback
     def _handle_sensor_change(self, event) -> None:
