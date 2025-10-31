@@ -56,6 +56,9 @@ def hass():
     hass.services = MagicMock()
     hass.services.async_call = AsyncMock()  # Make async_call awaitable
     hass.config_entries = MagicMock()
+    # Mock methods for duplicate detection
+    hass.config_entries.async_entries = MagicMock(side_effect=lambda domain=None: [])
+    hass.config_entries.async_entry_for_domain_unique_id = MagicMock(return_value=None)  # No existing entry
     hass.loop = asyncio.get_event_loop()
     hass.loop_thread_id = threading.get_ident()  # Add thread ID for async_write_ha_state
     hass.bus = MagicMock()  # Add bus for event listeners
@@ -189,7 +192,21 @@ def mock_states(hass, mock_button_state, mock_open_sensor_state, mock_closed_sen
 def mock_entity_registry():
     """Create a mock entity registry."""
     registry = MagicMock(spec=er.EntityRegistry)
-    registry.async_get.return_value = None  # Entity doesn't exist in registry
+    # Set up async_get to accept entity_id and return proper mock or None
+    def mock_async_get(entity_id):
+        # Return a mock entity for test entities, None for nonexistent ones
+        if entity_id in ["button.test_button", "binary_sensor.open_sensor", "binary_sensor.closed_sensor"]:
+            mock_entity = MagicMock()
+            mock_entity.entity_id = entity_id
+            return mock_entity
+        return None
+    
+    registry.async_get = mock_async_get
+    # Add _entities_data attribute for compatibility
+    registry._entities_data = {}
+    # Add entities attribute
+    registry.entities = MagicMock()
+    registry.entities.get_entry = MagicMock(return_value=None)
     return registry
 
 
@@ -302,9 +319,26 @@ def auto_enable_ha_config(hass):
 @pytest.fixture(autouse=True)
 def auto_mock_dependencies():
     """Auto-mock common dependencies for all tests."""
-    with patch("homeassistant.helpers.entity_registry.async_get") as mock_er:
-        mock_er.return_value = MagicMock()
-        yield mock_er
+    # Create a proper mock entity registry
+    registry = MagicMock(spec=er.EntityRegistry)
+    registry._entities_data = {}
+    registry.entities = MagicMock()
+    registry.entities.get_entry = MagicMock(return_value=None)
+    
+    # Set up async_get to return proper mocks for test entities
+    def mock_async_get_method(entity_id):
+        if entity_id in ["button.test_button", "binary_sensor.open_sensor", "binary_sensor.closed_sensor", "button.garage_door_opener"]:
+            mock_entity = MagicMock()
+            mock_entity.entity_id = entity_id
+            return mock_entity
+        return None
+    
+    registry.async_get = mock_async_get_method
+    
+    # Patch both the function and where it's imported in config_flow
+    with patch("homeassistant.helpers.entity_registry.async_get", return_value=registry):
+        with patch("custom_components.autocover.config_flow.async_get_entity_registry", return_value=registry):
+            yield registry
 
 
 @pytest.fixture

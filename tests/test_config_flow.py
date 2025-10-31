@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+from unittest.mock import MagicMock
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
@@ -46,20 +47,19 @@ class TestAutoCoverConfigFlow:
         schema = _get_schema(user_input)
 
         # Check that the schema has the expected fields and accepts defaults
-        # With selectors, defaults are on the vol.Required marker, not the selector itself
-        schema_keys = {key.schema: key for key in schema.schema.keys()}
-        assert CONF_BUTTON_ENTITY in schema_keys
-        assert CONF_TIME_TO_OPEN in schema_keys
-        assert CONF_TIME_TO_CLOSE in schema_keys
+        # With selectors, defaults are on the vol.Required marker
+        schema_dict = {marker.schema: marker for marker in schema.schema.keys()}
+        assert CONF_BUTTON_ENTITY in schema_dict
+        assert CONF_TIME_TO_OPEN in schema_dict
+        assert CONF_TIME_TO_CLOSE in schema_dict
         
         # Verify defaults are applied
-        assert schema_keys[CONF_BUTTON_ENTITY].default == "button.test"
-        assert schema_keys[CONF_TIME_TO_OPEN].default == 45.0
-        assert schema_keys[CONF_TIME_TO_CLOSE].default == 35.0
+        assert schema_dict[CONF_BUTTON_ENTITY].default() == "button.test"
+        assert schema_dict[CONF_TIME_TO_OPEN].default() == 45.0
+        assert schema_dict[CONF_TIME_TO_CLOSE].default() == 35.0
 
-    async def test_validate_input_with_valid_data_returns_no_errors(self, hass, mock_states, mock_entity_registry):
+    async def test_validate_input_with_valid_data_returns_no_errors(self, hass, mock_states):
         """Test that _validate_input returns no errors for valid input."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
             CONF_TIME_TO_OPEN: 30.0,
@@ -98,10 +98,8 @@ class TestAutoCoverConfigFlow:
         assert CONF_BUTTON_ENTITY in errors
         assert errors[CONF_BUTTON_ENTITY] == "invalid_entity"
 
-    async def test_validate_input_with_nonexistent_button_entity_returns_error(self, hass, mock_entity_registry):
+    async def test_validate_input_with_nonexistent_button_entity_returns_error(self, hass):
         """Test that _validate_input returns error for non-existent button entity."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-        mock_entity_registry.async_get.return_value = None
         hass.states.async_entity_ids.return_value = []
 
         config_data = {
@@ -129,11 +127,9 @@ class TestAutoCoverConfigFlow:
         assert CONF_OPEN_SENSOR in errors
         assert errors[CONF_OPEN_SENSOR] == "invalid_entity"
 
-    async def test_validate_input_with_nonexistent_sensor_returns_error(self, hass, mock_entity_registry):
+    async def test_validate_input_with_nonexistent_sensor_returns_error(self, hass, mock_states):
         """Test that _validate_input returns error for non-existent sensor."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-        mock_entity_registry.async_get.return_value = None
-        hass.states.async_entity_ids.return_value = []
+        hass.states.async_entity_ids.return_value = ["button.test_button"]
 
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -229,9 +225,8 @@ class TestAutoCoverConfigFlow:
         assert CONF_OPEN_SENSOR not in errors
         assert CONF_CLOSED_SENSOR not in errors
 
-    async def test_validate_input_with_minimal_valid_data_returns_no_errors(self, hass, mock_states, mock_entity_registry):
+    async def test_validate_input_with_minimal_valid_data_returns_no_errors(self, hass, mock_states):
         """Test that _validate_input works with minimal valid data."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
         config_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
             CONF_TIME_TO_OPEN: 30.0,
@@ -247,13 +242,15 @@ class TestAutoCoverConfigFlow:
 class TestAutoCoverConfigFlowIntegration:
     """Integration tests for the Auto Cover config flow."""
 
-    async def test_config_flow_with_valid_data_creates_entry(self, hass, mock_states, mock_entity_registry):
+    async def test_config_flow_with_valid_data_creates_entry(self, hass, mock_states):
         """Test that the config flow creates an entry with valid data."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-
+        # Mock no existing entries
+        hass.config_entries.async_entries.return_value = []
+        
         # Mock the flow handler
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         # Test data
         test_data = {
@@ -272,16 +269,18 @@ class TestAutoCoverConfigFlowIntegration:
         assert result["title"] == "Auto Cover - Test Button"
         assert result["data"] == test_data
 
-    async def test_config_flow_with_button_friendly_name_creates_proper_title(self, hass, mock_states, mock_entity_registry):
+    async def test_config_flow_with_button_friendly_name_creates_proper_title(self, hass, mock_states):
         """Test that the config flow uses button friendly name in title."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-
+        # Mock no existing entries
+        hass.config_entries.async_entries.return_value = []
+        
         # Create button state with friendly name
         button_state = mock_states.states.get("button.test_button")
         button_state.attributes = {"friendly_name": "My Garage Door Button"}
 
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         test_data = {
             CONF_BUTTON_ENTITY: "button.test_button",
@@ -294,16 +293,18 @@ class TestAutoCoverConfigFlowIntegration:
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["title"] == "Auto Cover - My Garage Door Button"
 
-    async def test_config_flow_with_button_without_friendly_name_creates_fallback_title(self, hass, mock_states, mock_entity_registry):
+    async def test_config_flow_with_button_without_friendly_name_creates_fallback_title(self, hass, mock_states):
         """Test that the config flow creates fallback title when no friendly name."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-
+        # Mock no existing entries
+        hass.config_entries.async_entries.return_value = []
+        
         # Remove friendly name from button state
         button_state = mock_states.states.get("button.test_button")
         button_state.attributes = {}
 
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         test_data = {
             CONF_BUTTON_ENTITY: "button.garage_door_opener",
@@ -316,14 +317,13 @@ class TestAutoCoverConfigFlowIntegration:
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["title"] == "Auto Cover - Garage Door Opener"
 
-    async def test_config_flow_with_invalid_data_shows_form_with_errors(self, hass, mock_entity_registry):
+    async def test_config_flow_with_invalid_data_shows_form_with_errors(self, hass):
         """Test that the config flow shows form with errors for invalid data."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-        mock_entity_registry.async_get.return_value = None
         hass.states.async_entity_ids.return_value = []
 
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         # Invalid data - non-existent button
         test_data = {
@@ -338,12 +338,14 @@ class TestAutoCoverConfigFlowIntegration:
         assert result["errors"] is not None
         assert CONF_BUTTON_ENTITY in result["errors"]
 
-    async def test_config_flow_prevents_duplicate_button_entity(self, hass, mock_states, mock_entity_registry):
+    async def test_config_flow_prevents_duplicate_button_entity(self, hass, mock_states):
         """Test that the config flow prevents duplicate button entities."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-
+        # Mock no existing entries initially
+        hass.config_entries.async_entry_for_domain_unique_id.return_value = None
+        
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         # First entry
         test_data = {
@@ -358,22 +360,27 @@ class TestAutoCoverConfigFlowIntegration:
         # Try to create duplicate entry
         flow2 = AutoCoverConfigFlow()
         flow2.hass = hass
+        flow2.context = {}  # Initialize context as mutable dict
+        
+        # Mock existing entry with same unique ID
+        mock_entry = MagicMock()
+        mock_entry.unique_id = "button.test_button"
+        hass.config_entries.async_entry_for_domain_unique_id.return_value = mock_entry
 
-        # Mock that the unique ID is already configured
-        with pytest.raises(config_entries.ConfigEntry) as exc_info:
-            flow2._abort_if_unique_id_configured = pytest.raises(
-                config_entries.ConfigEntry,
-                match="already_configured"
-            )
-
+        # Should raise AbortFlow with already_configured
+        with pytest.raises(data_entry_flow.AbortFlow) as exc_info:
             await flow2.async_step_user(test_data)
+        
+        assert exc_info.value.reason == "already_configured"
 
-    async def test_config_flow_handles_missing_optional_sensors_gracefully(self, hass, mock_states, mock_entity_registry):
+    async def test_config_flow_handles_missing_optional_sensors_gracefully(self, hass, mock_states):
         """Test that config flow works without optional sensors."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-
+        # Mock no existing entries
+        hass.config_entries.async_entries.return_value = []
+        
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         # Data without optional sensors
         test_data = {
@@ -388,12 +395,14 @@ class TestAutoCoverConfigFlowIntegration:
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["data"] == test_data
 
-    async def test_config_flow_with_extreme_valid_values(self, hass, mock_states, mock_entity_registry):
+    async def test_config_flow_with_extreme_valid_values(self, hass, mock_states):
         """Test that config flow handles extreme but valid values."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-
+        # Mock no existing entries
+        hass.config_entries.async_entries.return_value = []
+        
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         # Extreme but valid values
         test_data = {
@@ -408,26 +417,24 @@ class TestAutoCoverConfigFlowIntegration:
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
         assert result["data"] == test_data
 
-    async def test_config_flow_shows_form_on_initial_load(self, hass, mock_entity_registry):
+    async def test_config_flow_shows_form_on_initial_load(self, hass):
         """Test that config flow shows form on initial load."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         result = await flow.async_step_user()
 
         assert result["type"] == data_entry_flow.FlowResultType.FORM
         assert "data_schema" in result
 
-    async def test_config_flow_preserves_user_input_on_error(self, hass, mock_entity_registry):
+    async def test_config_flow_preserves_user_input_on_error(self, hass):
         """Test that config flow preserves user input when showing errors."""
-        hass.helpers.entity_registry.async_get = mock_entity_registry
-        mock_entity_registry.async_get.return_value = None
         hass.states.async_entity_ids.return_value = []
 
         flow = AutoCoverConfigFlow()
         flow.hass = hass
+        flow.context = {}  # Initialize context as mutable dict
 
         # Invalid data but with some valid values that should be preserved
         test_data = {
@@ -442,6 +449,7 @@ class TestAutoCoverConfigFlowIntegration:
         assert result["type"] == data_entry_flow.FlowResultType.FORM
         # The form should be shown again with user input preserved
         schema = result["data_schema"]
-        assert schema.schema[CONF_TIME_TO_OPEN].default == 30.0
-        assert schema.schema[CONF_TIME_TO_CLOSE].default == 25.0
-        assert schema.schema[CONF_THRESHOLD].default == 50
+        schema_dict = {marker.schema: marker for marker in schema.schema.keys()}
+        assert schema_dict[CONF_TIME_TO_OPEN].default() == 30.0
+        assert schema_dict[CONF_TIME_TO_CLOSE].default() == 25.0
+        assert schema_dict[CONF_THRESHOLD].default() == 50
