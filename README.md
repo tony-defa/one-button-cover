@@ -222,7 +222,10 @@ pytest tests/test_cover.py -v
 ## Credits
 
 - **Developer**: @tony-defa
-- **AI Assistant**: Developed with assistance from RooCode and Claude by Anthropic, MiniMax M2 by MiniMax
+- **AI Assistant**: Developed with assistance from RooCode and 
+    - Claude by Anthropic (Code)
+    - MiniMax M2 by MiniMax (Context)
+    - ChatGPT by OpenAI (Icon)
 - **Inspiration**: Born from the need to integrate simple garage door openers into Home Assistant
 
 ## License
