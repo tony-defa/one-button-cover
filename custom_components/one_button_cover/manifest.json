@@ -1,10 +1,11 @@
 {
   "domain": "one_button_cover",
   "name": "One Button Cover",
-  "codeowners": [],
+  "documentation": "https://github.com/tony-defa/one-button-cover/tree/dev?tab=readme-ov-file#features",
+  "issue_tracker": "https://github.com/tony-defa/one-button-cover/issues",
+  "codeowners": ["@tony-defa"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "",
   "iot_class": "local_polling",
   "requirements": [],
   "version": "1.0.0"
