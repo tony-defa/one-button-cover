@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "One Button Cover",
+        "description": "Configura tu integración One Button Cover",
+        "data": {
+          "button_entity": "Entidad de Botón",
+          "closed_sensor": "Sensor Cerrado (opcional)",
+          "open_sensor": "Sensor Abierto (opcional)",
+          "time_to_open": "Tiempo para Abrir (segundos)",
+          "time_to_close": "Tiempo para Cerrar (segundos)",
+          "threshold": "Porcentaje de Umbral"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Error al conectar con la entidad",
+      "invalid_entity": "ID de entidad inválido",
+      "invalid_time": "El tiempo debe ser un número positivo",
+      "invalid_threshold": "El umbral debe estar entre 0 y 100",
+      "unknown": "Ocurrió un error inesperado"
+    },
+    "abort": {
+      "already_configured": "Este dispositivo ya está configurado"
+    }
+  }
+}

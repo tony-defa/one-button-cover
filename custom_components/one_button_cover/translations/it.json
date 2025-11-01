@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "One Button Cover",
+        "description": "Configura la tua integrazione One Button Cover",
+        "data": {
+          "button_entity": "Entità Pulsante",
+          "closed_sensor": "Sensore Chiuso (opzionale)",
+          "open_sensor": "Sensore Aperto (opzionale)",
+          "time_to_open": "Tempo di Apertura (secondi)",
+          "time_to_close": "Tempo di Chiusura (secondi)",
+          "threshold": "Percentuale Soglia"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connessione all'entità fallita",
+      "invalid_entity": "ID entità non valido",
+      "invalid_time": "Il tempo deve essere un numero positivo",
+      "invalid_threshold": "La soglia deve essere compresa tra 0 e 100",
+      "unknown": "Si è verificato un errore imprevisto"
+    },
+    "abort": {
+      "already_configured": "Questo dispositivo è già configurato"
+    }
+  }
+}
