@@ -6,6 +6,12 @@
 
 A Home Assistant custom component that creates a virtual cover entity from a single-button garage door or gate opener. Perfect for simple garage doors that use a toggle button for open/close/stop operations.
 
+## Disclaimer 
+
+_This project is is heavily vibe coded, or context engendered, including this README. While every effort has been made to ensure quality and accuracy, please be aware that AI-generated content may contain errors or omissions. Use at your own discretion. This project was born from the need to integrate my Chamberlain one-button garage door opener with Home Assistant, and I hope it helps others with similar setups. This custom component can also be used for other type of covers that use a single button for all operations._
+
+_My Home Assistant is running within a Docker container and I do not use HACS, so I cannot guarantee compatibility in those environments. However, I have included HACS installation instructions for convenience, but I am not sure if it will work perfectly nor can I provide support for HACS-related issues. Contributions however are welcome._
+
 ## Features
 
 - ✨ **Single Button Control** - Works with garage doors/gates that use one button for all operations
