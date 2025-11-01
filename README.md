@@ -189,10 +189,6 @@ The cover entity provides detailed diagnostic information through attributes:
 - Check that the button entity is accessible
 - Reload the integration to re-enable
 
-## Development
-
-This component was developed with assistance from Roo (Claude), an AI coding assistant by Anthropic.
-
 ### Architecture
 
 The component follows Home Assistant best practices with:
@@ -220,7 +216,7 @@ pytest tests/test_cover.py -v
 ## Credits
 
 - **Developer**: @tony-defa
-- **AI Assistant**: Developed with assistance from RooCode and Claude by Anthropic
+- **AI Assistant**: Developed with assistance from RooCode and Claude by Anthropic, MiniMax M2 by MiniMax
 - **Inspiration**: Born from the need to integrate simple garage door openers into Home Assistant
 
 ## License
