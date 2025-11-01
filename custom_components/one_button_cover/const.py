@@ -27,7 +27,7 @@ class CoverState(Enum):
 
 
 # Button timing constants
-BUTTON_ACTIVATION_TIME = 0.5  # seconds
+BUTTON_ACTIVATION_TIME = 1.0  # seconds
 POSITION_UPDATE_INTERVAL = 0.1  # seconds
 
 # Safety constants
